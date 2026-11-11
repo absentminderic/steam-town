@@ -30,7 +30,7 @@ Everything is static: there is no build step, and GitHub Pages serves the files 
 
 ## Credits
 
-- Made by Jingyi, [@absentminderic](https://github.com/absentminderic), [Kenetizen.github.io](https://kenetizen.github.io/), [@letitgotia](https://github.com/letitgotia) and Vivian for NMC5344, November 2026.
+- Made by Jingyi, [@absentminderic](https://github.com/absentminderic), [Kenetizen](https://github.com/Kenetizen), [@letitgotia](https://github.com/letitgotia) and Vivian for NMC5344, November 2026.
 - Data: Steam Games Dataset 2025 (Kaggle), store data up to 10 March 2025.
 - 3D town models: KayKit City Builder Bits and Medieval Hexagon Pack by Kay Lousberg, CC0. Rendering: [three.js](https://threejs.org) (MIT). Fonts from Google Fonts (SIL Open Font License): Big Shoulders Display and Zen Maru Gothic in Steam Town and on the home page; Press Start 2P, Pixelify Sans and Space Grotesk in the pixel story.
 - Music in Steam Town: "Not Quite a Masterpiece", made with Suno.
