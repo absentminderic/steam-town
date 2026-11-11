@@ -2,7 +2,7 @@
 
 A scrolling pixel story about 81,117 Steam games, one pixel each. It shows how supporting more operating systems, more languages and DLC go with reaching 100,000+ estimated owners.
 
-NMC5344 group project, November 2026. Made by Jingyi, [@absentminderic](https://github.com/absentminderic), [Kenetizen](https://github.com/Kenetizen), [@letitgotia](https://github.com/letitgotia) and Vivian.
+NMC5344 group project, November 2026. Made by Jingyi, [@absentminderic](https://github.com/absentminderic), [@Kenetizen](https://github.com/Kenetizen), [@letitgotia](https://github.com/letitgotia) and Vivian.
 
 ## Files
 
