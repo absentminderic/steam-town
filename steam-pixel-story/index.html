@@ -1,0 +1,1108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>What Makes a Game Popular?</title>
+<meta name="description" content="81,117 Steam games, one pixel each: how operating systems, languages and DLC go with reaching more players.">
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mNgGH5AREjqPz5MUPOXjy/+91/+D8bWfR9QsLz/CtyGoGvGZgBOQwg5m6B3QBxCNsNsh2GsriDWALzhQMgAomKC5BjAZgjZmtENIUszevQO7rwDACdN2ACDy1CCAAAAAElFTkSuQmCC">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Press+Start+2P&family=Space+Grotesk:wght@400;500;700&display=swap">
+<style>
+/* Layout: a CRT screen of game pixels (one pixel = one game) behind RPG dialog boxes.
+   Boxes ride a left column on wide screens and the bottom of the screen on phones.
+   One deliberate dark arcade look, so every color is set here explicitly. */
+:root {
+  color-scheme: dark;
+  --bg: #0c0e13;          /* screen + page */
+  --bg-band: #10131d;     /* after-story band */
+  --line: #262c3d;
+  --ink: #f4f1e8;
+  --ink-2: #b9bfd3;
+  --muted: #8a91a8;
+  --box: #121731;         /* dialog box */
+  --box-2: #1a2045;
+  --box-edge: #f4f1e8;
+  --box-edge-2: #4a5275;
+  --gold: #f2b632;
+  --gold-hi: #ffe08a;
+  --raw: #6f7a96;         /* games before they are sorted */
+  /* loot tiers: Common is a muted grey; the four rarity hues pass the dark-mode categorical checks */
+  --t0: #464c5a; --t1: #369e4e; --t2: #085dc7; --t3: #b073da; --t4: #d37812;
+  --removed: #e0483e;
+  --explained: #f4f1e8;
+  --unexplained: #232838;
+  --f-arcade: "Press Start 2P", ui-monospace, "Cascadia Mono", Menlo, monospace;
+  --f-pixel: "Pixelify Sans", "Space Grotesk", system-ui, sans-serif;
+  --f-body: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --hud-h: 48px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg); }
+a { color: var(--gold-hi); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.sprite { image-rendering: pixelated; flex: none; display: block; }
+
+/* ---------- HUD ---------- */
+.hud {
+  position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 20;
+  height: var(--hud-h);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: 2px solid var(--line);
+  font-family: var(--f-arcade); font-size: 9px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--ink-2);
+}
+.hud-title { color: var(--gold-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.hud-right { display: flex; align-items: center; gap: 14px; white-space: nowrap; }
+.hud-bar { display: flex; gap: 3px; }
+.hud-bar i { width: 8px; height: 10px; background: var(--line); }
+.hud-bar i.on { background: var(--gold); }
+.sound {
+  font: inherit; text-transform: uppercase; letter-spacing: inherit; color: var(--ink);
+  background: var(--box-2); border: 2px solid var(--box-edge-2); padding: 6px 8px; cursor: pointer;
+}
+.sound[aria-pressed="true"] { border-color: var(--gold); color: var(--gold-hi); }
+#hud-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hud-right { min-width: 0; }
+@media (max-width: 699px) { .hud-title { display: none; } .hud { justify-content: flex-end; } }
+@media (max-width: 479px) { .hud-bar { display: none; } }
+
+/* ---------- story ---------- */
+.story { position: relative; }
+.stage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; background: var(--bg); }
+#field, #glow { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#field { image-rendering: pixelated; }
+#glow { pointer-events: none; filter: blur(7px) saturate(1.5); opacity: .75; mix-blend-mode: screen; }
+.crt {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    repeating-linear-gradient(to bottom, rgba(0, 0, 0, .3) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0, 0, 0, .65) 100%);
+}
+.labels { position: absolute; inset: 0; pointer-events: none; }
+.lbl {
+  position: absolute; display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  font-family: var(--f-pixel); font-weight: 500; font-size: 15px; line-height: 1.25; color: var(--ink-2); white-space: nowrap;
+  font-variant-numeric: tabular-nums; text-shadow: 0 1px 0 #000, 0 0 8px rgba(0, 0, 0, .9);
+  animation: lbl-in .45s .3s both;
+}
+.lbl b { color: var(--ink); font-weight: 700; }
+.lbl.center { flex-direction: column; align-items: center; text-align: center; white-space: normal; gap: 2px; }
+.lbl.big b { font-family: var(--f-arcade); font-weight: 400; font-size: 14px; color: var(--gold-hi); line-height: 1.6; }
+.sq { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+.sq.red { background: var(--removed); }
+@keyframes lbl-in { from { opacity: 0; transform: translateY(4px); } }
+.tip {
+  position: absolute; z-index: 5; pointer-events: none;
+  display: grid; gap: 2px; padding: 8px 10px; max-width: 250px;
+  background: var(--box); color: var(--ink); border: 2px solid var(--box-edge);
+  box-shadow: 0 0 0 2px #000, 4px 4px 0 2px rgba(0, 0, 0, .5);
+  font-size: 13px; line-height: 1.35; font-variant-numeric: tabular-nums;
+}
+.tip span { color: var(--ink-2); }
+
+.steps {
+  position: relative; z-index: 2;
+  margin-top: -100vh; margin-top: -100svh;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  pointer-events: none;
+}
+.step { min-height: 100vh; min-height: 100svh; display: flex; align-items: center; padding-block: 72px 48px; }
+
+/* RPG dialog box */
+.card {
+  pointer-events: auto;
+  width: min(400px, 40vw);
+  margin-left: 6px;
+  background: var(--box);
+  color: var(--ink);
+  border: 3px solid var(--box-edge);
+  outline: 3px solid #000;
+  box-shadow: 0 0 0 6px var(--box-edge-2), 12px 12px 0 6px rgba(0, 0, 0, .55);
+  padding: 18px 20px 16px;
+}
+.card > :last-child { margin-bottom: 0; }
+.head { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; }
+.head .sprite { width: 48px; height: 48px; }
+.eyebrow { margin: 0; font-family: var(--f-arcade); font-size: 9px; line-height: 1.7; letter-spacing: .04em; text-transform: uppercase; color: var(--gold); }
+.card h2 { margin: 0 0 10px; font-family: var(--f-pixel); font-weight: 700; font-size: 1.6rem; line-height: 1.1; color: #fff; text-wrap: balance; }
+.card p { margin: 0 0 10px; }
+.card b { color: var(--gold-hi); font-weight: 700; }
+.card .note { font-size: .875rem; color: var(--ink-2); }
+
+/* title screen */
+.hero-card { width: min(560px, 48vw); padding: 26px 26px 22px; text-align: left; }
+.logo {
+  margin: 4px 0 20px;
+  font-family: var(--f-arcade); font-weight: 400;
+  font-size: clamp(1.15rem, 2.7vw, 1.95rem); line-height: 1.45; letter-spacing: .01em; text-transform: uppercase;
+  color: var(--gold);
+  background: linear-gradient(180deg, #fff6c2 0 28%, #ffd85a 28% 52%, #f5a524 52% 78%, #c4630f 78% 100%);
+  background-size: 100% 1.45em;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(3px 3px 0 #5a2600) drop-shadow(2px 2px 0 #000);
+  text-wrap: balance;
+}
+.party { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 16px; }
+.party .sprite { width: 40px; height: 40px; }
+.start { margin: 16px 0 0; font-family: var(--f-arcade); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink); }
+.blink { display: inline-block; animation: blink 1.1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: .1; } }
+@media (hover: none) { .hover-only { display: none; } }
+@media (hover: hover) { .touch-only { display: none; } }
+
+.legend { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 4px; font-size: .875rem; }
+.legend li { display: grid; grid-template-columns: 12px auto 1fr auto; gap: 8px; align-items: center; }
+.legend .sw { width: 12px; height: 12px; outline: 1px solid rgba(255, 255, 255, .25); }
+.legend .tier { font-family: var(--f-pixel); font-weight: 700; color: #fff; }
+.legend .rng { color: var(--ink-2); }
+.legend .num { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.removed-list { margin: 0 0 10px; padding: 0; list-style: none; display: grid; gap: 6px; }
+.removed-list li { display: grid; grid-template-columns: 12px 1fr; gap: 10px; align-items: baseline; }
+.removed-list li::before { content: ""; width: 10px; height: 10px; background: var(--removed); transform: translateY(1px); }
+
+.mini { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: .8125rem; font-variant-numeric: tabular-nums; }
+.mini th, .mini td { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+.mini th:first-child, .mini td:first-child { text-align: left; }
+.mini thead th { font-weight: 500; color: var(--ink-2); }
+.mini caption { caption-side: bottom; text-align: left; padding-top: 6px; color: var(--ink-2); font-size: .8125rem; }
+
+/* build-a-game menu */
+.builder fieldset { border: 0; padding: 0; margin: 0 0 10px; min-width: 0; }
+.builder legend { padding: 0; margin: 0 0 6px; font-family: var(--f-arcade); font-size: 8px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
+.seg-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg-row input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.seg-row label {
+  font-family: var(--f-arcade); font-size: 10px; line-height: 1; padding: 9px 10px;
+  border: 2px solid var(--box-edge-2); background: var(--box-2); color: var(--ink);
+  cursor: pointer; user-select: none;
+}
+.seg-row label:hover { border-color: var(--ink-2); }
+.seg-row input:checked + label { border-color: var(--gold); color: var(--gold-hi); background: #232a5c; }
+.seg-row input:checked + label::before { content: "▶"; margin-right: 6px; font-size: 8px; vertical-align: 1px; }
+.seg-row input:focus-visible + label { outline: 3px solid var(--gold); outline-offset: 2px; }
+.result { display: grid; gap: 6px; margin: 6px 0 12px; }
+.result .big { font-family: var(--f-arcade); font-size: 1.7rem; line-height: 1; color: var(--gold-hi); }
+.warn { margin: 4px 0 0; padding: 6px 8px; background: #2a2110; border-left: 4px solid var(--gold); color: var(--ink); font-size: .8125rem; }
+.picks { display: flex; flex-wrap: wrap; gap: 8px; }
+.picks button {
+  font-family: var(--f-arcade); font-size: 8px; letter-spacing: .04em; text-transform: uppercase;
+  padding: 8px 10px; background: var(--box-2); color: var(--ink);
+  border: 2px solid var(--box-edge); cursor: pointer;
+}
+.picks button:hover { background: #232a5c; }
+.hardcore { margin-top: 8px; font-size: .875rem; }
+.hardcore summary { cursor: pointer; font-family: var(--f-arcade); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; color: var(--gold); }
+.hardcore p { font-size: .8125rem; color: var(--ink-2); }
+.takeaways { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; }
+
+@media (max-width: 899px) {
+  .step { align-items: flex-end; padding-block: 0 5svh; }
+  .card, .hero-card { width: auto; max-width: 560px; margin-inline: 6px; padding: 14px 16px 12px; font-size: 15px; line-height: 1.5; }
+  .card h2 { font-size: 1.3rem; margin-bottom: 8px; }
+  .card p { margin-bottom: 8px; }
+  .head { margin-bottom: 8px; }
+  .head .sprite { width: 36px; height: 36px; }
+  .party .sprite { width: 32px; height: 32px; }
+  .legend { margin: 6px 0 8px; gap: 2px; }
+  .builder-intro { display: none; }
+  .builder fieldset { margin-bottom: 8px; }
+  .seg-row label { padding: 8px 9px; }
+  .result .big { font-size: 1.4rem; }
+}
+
+/* ---------- after the story ---------- */
+.after {
+  position: relative; z-index: 3;
+  background: var(--bg-band);
+  border-top: 3px solid var(--box-edge-2);
+  padding-block: 64px 88px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.after-inner { max-width: 960px; margin: 0 auto; display: grid; gap: 56px; }
+.after h2 { margin: 0 0 6px; font-family: var(--f-pixel); font-weight: 700; font-size: 2rem; line-height: 1.1; color: #fff; }
+.after .sub { margin: 0 0 18px; color: var(--ink-2); }
+.after .head .sprite { width: 40px; height: 40px; }
+.patch { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; max-width: 72ch; }
+.patch li { display: grid; grid-template-columns: 120px 1fr; gap: 14px; align-items: baseline; }
+.patch .tag { font-family: var(--f-arcade); font-size: 8px; letter-spacing: .04em; text-transform: uppercase; color: var(--bg); background: var(--gold); padding: 4px 6px; justify-self: start; }
+@media (max-width: 599px) { .patch li { grid-template-columns: 1fr; gap: 4px; } }
+.numbers { display: grid; gap: 28px; }
+.table-wrap { overflow-x: auto; }
+.data { border-collapse: collapse; width: 100%; min-width: 420px; font-size: .875rem; font-variant-numeric: tabular-nums; }
+.data th, .data td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: right; }
+.data th:first-child, .data td:first-child { text-align: left; }
+.data thead th { color: var(--ink-2); font-weight: 500; }
+.data caption { caption-side: top; text-align: left; color: var(--ink-2); padding-bottom: 6px; font-size: .875rem; }
+.after details > summary { cursor: pointer; font-family: var(--f-arcade); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--gold-hi); }
+.after details[open] > summary { margin-bottom: 18px; }
+.credits p { margin: 0 0 10px; max-width: 72ch; }
+.credits .links { display: flex; flex-wrap: wrap; gap: 10px 22px; }
+.psst { color: var(--muted); font-family: var(--f-arcade); font-size: 8px; letter-spacing: .04em; text-transform: uppercase; }
+
+.toast {
+  position: fixed; z-index: 40;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  max-width: min(380px, calc(100vw - 32px));
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px 10px 10px;
+  background: var(--box); color: var(--gold-hi);
+  border: 3px solid var(--gold); outline: 3px solid #000;
+  font-family: var(--f-arcade); font-size: 9px; line-height: 1.6; letter-spacing: .03em;
+  transform: translateY(170%); transition: transform .35s steps(5);
+}
+.toast .sprite { width: 32px; height: 32px; }
+.toast.show { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .blink, .lbl { animation: none; }
+  .toast { transition: none; }
+}
+</style>
+</head>
+<body>
+<header class="hud">
+  <span class="hud-title">What makes a game popular?</span>
+  <span class="hud-right">
+    <span id="hud-label">Title</span>
+    <span class="hud-bar" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    <button type="button" class="sound" id="sound" aria-pressed="false">♪ Off</button>
+  </span>
+</header>
+
+<main>
+<section class="story" aria-label="Scrolling story">
+  <div class="stage" aria-hidden="true">
+    <canvas id="field"></canvas>
+    <canvas id="glow"></canvas>
+    <div class="crt"></div>
+    <div class="labels" id="labels"></div>
+    <div class="tip" id="tip" hidden></div>
+  </div>
+
+  <div class="steps">
+    <article class="step step-hero" data-scene="scatter" data-stage="0" data-hud="Title">
+      <div class="card hero-card">
+        <p class="eyebrow">NMC5344 group project · November 2026</p>
+        <h1 class="logo">What makes a game popular?</h1>
+        <div class="party" aria-hidden="true">
+          <img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAY0lEQVR42mNgoAYQEZL6Tw5GMaD/8v//1n0fwBKzFizDwCBxkDwIy/uvwDQAJgkzICapYIANoMgLuDBRBhCDcRrw5eMLojBeA0CBhw8TNIBmLiDaALJdABIkBWMYQFFmogQAAO9ixSbI5RaIAAAAAElFTkSuQmCC" alt="" width="40" height="40">
+          <img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mNgGH5AREjqPz5MUPOXjy/+91/+D8bWfR9QsLz/CtyGoGvGZgBOQwg5m6B3QBxCNsNsh2GsriDWALzhQMgAomKC5BjAZgjZmtENIUszevQO7rwDACdN2ACDy1CCAAAAAElFTkSuQmCC" alt="" width="40" height="40">
+          <img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAVUlEQVR42mNgGHRAREjqPzZMkgH/H3T9/7TNCI5JNoBiF5xcFA3GVV5KYDxMDCA6PLAZgI7xGkKMAXgNQTYAn0FYDcCVBohOGyDBmKQCojBtXEAOAADRTMZPHahLXwAAAABJRU5ErkJggg==" alt="" width="40" height="40">
+          <img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAASUlEQVR42mNgoBYQEZL6TwrG0FzlpfT/5KJoojBILVZDyHYBsiEf76zDi3FqRjYA5ER0TJIBNHEBzBUD4wKSDRiYMBgmSZkcAACsNlELO7tcagAAAABJRU5ErkJggg==" alt="" width="40" height="40">
+          <img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAYklEQVR42mNgGFRAREjqPzEYp+YqL6X/JxdF48UgNRiGEKsZpyFUMQAb/rTNCIwJhgU2F4DE/j/o+r+1UgbMJtkLIDGQZrINgBmCrhmnATD/EoupHwsgQVIwUdFIVpKmOwAAAlhO2bC+1PMAAAAASUVORK5CYII=" alt="" width="40" height="40">
+          <img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAYklEQVR42mNgGL5AREjqPzImWePiuBcomCiDsGlExnH683Abgqz5y0fcBuA0BGYAsr/RnQ/CWA1AVwxyAS4xrK7AZRsuF+A1AFvIEwwHQqGP1wBSNCMbADcEPcWRigc+zwAAd64cwE4fklgAAAAASUVORK5CYII=" alt="" width="40" height="40">
+          <img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAaElEQVR42mNgoCYQEZL6TwzGq/H/gy4w/rTNCAVvrZQBY6wGgTggRciGYDMAJg9TSz0DsHkDnwFYwwHZIHwGEB0byIaQpBk9XMjSTLEBRCcgXJqrvJT+n1wUjYJBYkQZQhUDSMoHAw4A1ULkpvse8sYAAAAASUVORK5CYII=" alt="" width="40" height="40">
+        </div>
+        <p class="lede">Steam lists tens of thousands of games, and most of them are barely played. We looked at 89,624 of them to see which design choices go with reaching more players.</p>
+        <p class="note">Every pixel on this screen is one game.</p>
+        <p class="start"><span class="blink" aria-hidden="true">▼</span> Scroll to start</p>
+      </div>
+    </article>
+
+    <article class="step" data-scene="grid" data-stage="1" data-hud="Stage 1 · The data">
+      <div class="card">
+        <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAY0lEQVR42mNgoAYQEZL6Tw5GMaD/8v//1n0fwBKzFizDwCBxkDwIy/uvwDQAJgkzICapYIANoMgLuDBRBhCDcRrw5eMLojBeA0CBhw8TNIBmLiDaALJdABIkBWMYQFFmogQAAO9ixSbI5RaIAAAAAElFTkSuQmCC" alt="" width="48" height="48"><p class="eyebrow">Stage 1 · The data</p></div>
+        <h2>89,624 games, one pixel each</h2>
+        <p>Our file is the Steam Games Dataset 2025 from Kaggle, built from Steam store pages, the Steam API and SteamSpy. It runs up to 10 March 2025.</p>
+        <p>Each game comes with its price, DLC count, supported systems and languages, and an estimated number of owners. Owners are our measure of popularity.</p>
+      </div>
+    </article>
+
+    <article class="step" data-scene="funnel" data-stage="2" data-hud="Stage 2 · Clean-up">
+      <div class="card">
+        <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mNgwAFEhKT+I2MGUgFIU5WX0v+Ti6JHDRgQA9CjkOSoBCmeo6X1/4WHNRiD2EQbgMt2ol0BUvT/QRfY7+g0QQPwaSbKEIoMIEYzXkOoYgApGKYPAI1A6aqrcKPWAAAAAElFTkSuQmCC" alt="" width="48" height="48"><p class="eyebrow">Stage 2 · Clean-up</p></div>
+        <h2>8,507 games sit this one out</h2>
+        <ul class="removed-list">
+          <li><span><b>8,418</b> games have an owner estimate of “0 – 0”. Steam has no estimate for them, which is not the same as zero players.</span></li>
+          <li><span><b>79</b> games list no supported language.</span></li>
+          <li><span><b>10</b> rows have broken values, such as text where a number should be.</span></li>
+        </ul>
+        <p>That leaves <b>81,117 games</b> for the charts.</p>
+      </div>
+    </article>
+
+    <article class="step" data-scene="tiers" data-stage="3" data-hud="Stage 3 · Loot tiers">
+      <div class="card">
+        <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mNgGH5AREjqPz5MUPOXjy/+91/+D8bWfR9QsLz/CtyGoGvGZgBOQwg5m6B3QBxCNsNsh2GsriDWALzhQMgAomKC5BjAZgjZmtENIUszevQO7rwDACdN2ACDy1CCAAAAAElFTkSuQmCC" alt="" width="48" height="48"><p class="eyebrow">Stage 3 · Loot tiers</p></div>
+        <h2>Only 9.4% of games are Rare or better</h2>
+        <p>Owner estimates come in ranges, so we sorted the games into five loot tiers. Rare or better means 100,000 owners or more, and those games sit on the left of the block.</p>
+        <ul class="legend">
+          <li><span class="sw" style="background:var(--t4)"></span><span class="tier">Legendary</span><span class="rng">2m+</span><span class="num">559 · 0.7%</span></li>
+          <li><span class="sw" style="background:var(--t3)"></span><span class="tier">Epic</span><span class="rng">500k–2m</span><span class="num">1,611 · 2.0%</span></li>
+          <li><span class="sw" style="background:var(--t2)"></span><span class="tier">Rare</span><span class="rng">100k–500k</span><span class="num">5,474 · 6.7%</span></li>
+          <li><span class="sw" style="background:var(--t1)"></span><span class="tier">Uncommon</span><span class="rng">20k–100k</span><span class="num">14,231 · 17.5%</span></li>
+          <li><span class="sw" style="background:var(--t0)"></span><span class="tier">Common</span><span class="rng">under 20k</span><span class="num">59,242 · 73.0%</span></li>
+        </ul>
+        <p class="note"><span class="hover-only">Hover over the pixels to see each tier.</span><span class="touch-only">Tap the pixels to see each tier.</span></p>
+      </div>
+    </article>
+
+    <article class="step" data-scene="systems" data-stage="4" data-hud="Stage 4 · Systems">
+      <div class="card">
+        <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAVUlEQVR42mNgGHRAREjqPzZMkgH/H3T9/7TNCI5JNoBiF5xcFA3GVV5KYDxMDCA6PLAZgI7xGkKMAXgNQTYAn0FYDcCVBohOGyDBmKQCojBtXEAOAADRTMZPHahLXwAAAABJRU5ErkJggg==" alt="" width="48" height="48"><p class="eyebrow">Stage 4 · Power-up 1</p></div>
+        <h2>Run on more systems</h2>
+        <p>Of games on a single operating system (almost always Windows), <b>7.8%</b> reach 100,000 owners. Add a second system and it is <b>12.2%</b>.</p>
+        <p>Games on Windows, macOS and Linux reach <b>17.8%</b>, more than twice the single-system rate.</p>
+      </div>
+    </article>
+
+    <article class="step" data-scene="languages" data-stage="5" data-hud="Stage 5 · Languages">
+      <div class="card">
+        <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAASUlEQVR42mNgoBYQEZL6TwrG0FzlpfT/5KJoojBILVZDyHYBsiEf76zDi3FqRjYA5ER0TJIBNHEBzBUD4wKSDRiYMBgmSZkcAACsNlELO7tcagAAAABJRU5ErkJggg==" alt="" width="48" height="48"><p class="eyebrow">Stage 5 · Power-up 2</p></div>
+        <h2>Speak more languages</h2>
+        <p>The share reaching 100,000 owners climbs from <b>5.2%</b> for one language to <b>7.5%</b> for two to five, <b>20.1%</b> for six to ten and <b>24.3%</b> for 11 or more.</p>
+        <p>The big jump comes at six languages.</p>
+      </div>
+    </article>
+
+    <article class="step" data-scene="dlc" data-stage="6" data-hud="Stage 6 · DLC">
+      <div class="card">
+        <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAYklEQVR42mNgGFRAREjqPzEYp+YqL6X/JxdF48UgNRiGEKsZpyFUMQAb/rTNCIwJhgU2F4DE/j/o+r+1UgbMJtkLIDGQZrINgBmCrhmnATD/EoupHwsgQVIwUdFIVpKmOwAAAlhO2bC+1PMAAAAASUVORK5CYII=" alt="" width="48" height="48"><p class="eyebrow">Stage 6 · Power-up 3</p></div>
+        <h2>Add DLC</h2>
+        <p><b>26.8%</b> of games with DLC reach 100,000 owners, against <b>6.0%</b> of games without. That is about four and a half times the rate.</p>
+        <p class="note">Cause and effect can run both ways here: studios tend to make DLC for games that already sell.</p>
+      </div>
+    </article>
+
+    <article class="step" data-scene="combo0" data-stage="7" data-hud="Stage 7 · Combo">
+      <div class="card">
+        <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAR0lEQVR42mNgoDUQEZL6j45J0vz/QRccf9pmRLwByJpBGgdeM1FhgO5ndEzQNdhCfHCFA0maSdaIrpkkjTDNZGlEjwGGIQcAl7C0uJ+AuhwAAAAASUVORK5CYII=" alt="" width="48" height="48"><p class="eyebrow">Stage 7 · Combo</p></div>
+        <h2>Stack the power-ups</h2>
+        <p>Take games on one system with no DLC. Of those in one language, <b>3.5%</b> reach 100,000 owners. Of those in 11 or more languages, <b>11.1%</b> do.</p>
+        <p class="note">Each waffle has 100 squares, and each square is 1% of the games in that group.</p>
+      </div>
+    </article>
+
+    <article class="step" data-scene="combo6" data-stage="7" data-hud="Stage 7 · Combo">
+      <div class="card">
+        <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAR0lEQVR42mNgoDUQEZL6j45J0vz/QRccf9pmRLwByJpBGgdeM1FhgO5ndEzQNdhCfHCFA0maSdaIrpkkjTDNZGlEjwGGIQcAl7C0uJ+AuhwAAAAASUVORK5CYII=" alt="" width="48" height="48"><p class="eyebrow">Stage 7 · Combo x3</p></div>
+        <h2>Now add six or more DLC</h2>
+        <p>The same two groups climb to <b>22.2%</b> and <b>78.2%</b>. Wide language support and lots of DLC together go with by far the widest reach.</p>
+        <table class="mini">
+          <caption>One-system games. Share reaching 100,000+ owners by number of DLC.</caption>
+          <thead><tr><th scope="col">DLC</th><th scope="col">0</th><th scope="col">1</th><th scope="col">2–5</th><th scope="col">6+</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">1 language</th><td>3.5%</td><td>9.2%</td><td>12.2%</td><td>22.2%</td></tr>
+            <tr><th scope="row">11+ languages</th><td>11.1%</td><td>32.0%</td><td>52.6%</td><td>78.2%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="step" data-scene="builder" data-stage="8" data-hud="Stage 8 · Your turn">
+      <div class="card">
+        <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAATUlEQVR42mNgoCYQEZL6TwzGqXnWgmX/v3x8AcYgNjqOSSoAY6yGwAzAhwkaAFNACOP1BtlhgM2wKi+l/ycXRROvadSAYWkAyYmHHAAAIoqs44Do9pMAAAAASUVORK5CYII=" alt="" width="48" height="48"><p class="eyebrow">Stage 8 · Your turn</p></div>
+        <h2>Build a game</h2>
+        <p class="note builder-intro">Pick a build. The squares show how real games with that build did.</p>
+        <form class="builder" id="builder">
+          <fieldset>
+            <legend>Operating systems</legend>
+            <div class="seg-row">
+              <input type="radio" name="sys" id="sys-0" value="0" checked><label for="sys-0">1</label>
+              <input type="radio" name="sys" id="sys-1" value="1"><label for="sys-1">2</label>
+              <input type="radio" name="sys" id="sys-2" value="2"><label for="sys-2">3</label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Languages</legend>
+            <div class="seg-row">
+              <input type="radio" name="lang" id="lang-0" value="0" checked><label for="lang-0">1</label>
+              <input type="radio" name="lang" id="lang-1" value="1"><label for="lang-1">2–5</label>
+              <input type="radio" name="lang" id="lang-2" value="2"><label for="lang-2">6–10</label>
+              <input type="radio" name="lang" id="lang-3" value="3"><label for="lang-3">11+</label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>DLC</legend>
+            <div class="seg-row">
+              <input type="radio" name="dlc" id="dlc-0" value="0" checked><label for="dlc-0">0</label>
+              <input type="radio" name="dlc" id="dlc-1" value="1"><label for="dlc-1">1</label>
+              <input type="radio" name="dlc" id="dlc-2" value="2"><label for="dlc-2">2–5</label>
+              <input type="radio" name="dlc" id="dlc-3" value="3"><label for="dlc-3">6+</label>
+            </div>
+          </fieldset>
+          <div class="result" aria-live="polite">
+            <span class="big" id="b-pct">3.5%</span>
+            <span id="b-text">of the 30,865 games with this build reached 100,000+ owners. It is the most common build on Steam.</span>
+            <p class="warn" id="b-warn" hidden></p>
+          </div>
+          <div class="picks">
+            <button type="button" id="pick-common">Most common</button>
+            <button type="button" id="pick-best">Best odds</button>
+          </div>
+        </form>
+      </div>
+    </article>
+
+    <article class="step" data-scene="model-before" data-stage="9" data-hud="Stage 9 · Boss fight">
+      <div class="card">
+        <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAYklEQVR42mNgGL5AREjqPzImWePiuBcomCiDsGlExnH683Abgqz5y0fcBuA0BGYAsr/RnQ/CWA1AVwxyAS4xrK7AZRsuF+A1AFvIEwwHQqGP1wBSNCMbADcEPcWRigc+zwAAd64cwE4fklgAAAAASUVORK5CYII=" alt="" width="48" height="48"><p class="eyebrow">Stage 9 · Boss fight</p></div>
+        <h2>The model fights back</h2>
+        <p>Next we fitted four regression models that predict owners from systems, languages and DLC. The best one explained just <b>5.5%</b> of the differences between games.</p>
+        <p>It also said each extra language went with <b>fewer</b> owners, the opposite of what Stage 5 shows.</p>
+      </div>
+    </article>
+
+    <article class="step" data-scene="model-after" data-stage="9" data-hud="Stage 9 · Plot twist">
+      <div class="card">
+        <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAUElEQVR42mNgoCYQEZL6jw0TrXnWgmVYMUFDYJr7L/8H4y8fX4AxjE/QEGQDkDWSZQA2PAQMoDgWCKWDKi8l4g3BZTDIEIoMGoaGUBSoyAAAKOrk1yTJunIAAAAASUVORK5CYII=" alt="" width="48" height="48"><p class="eyebrow">Stage 9 · Plot twist</p></div>
+        <h2>The culprit: games with no estimate</h2>
+        <p>The games with a “0 – 0” estimate were still in the models, counted as zero owners. They list 13 languages on average, against 4 for every other game, and 63% of the games that claim more than 50 languages have no estimate.</p>
+        <p>Take them out, as the charts already did, and more languages go with more owners. The best model now explains <b>15.4%</b>.</p>
+        <details class="hardcore">
+          <summary>Hardcore mode</summary>
+          <table class="mini">
+            <thead><tr><th scope="col">Model (adj. R²)</th><th scope="col">With 0 – 0</th><th scope="col">Without</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">M1 main effects</th><td>.053</td><td>.145</td></tr>
+              <tr><th scope="row">M2 + DLC × OS</th><td>.053</td><td>.146</td></tr>
+              <tr><th scope="row">M3 + DLC × languages</th><td>.055</td><td>.154</td></tr>
+              <tr><th scope="row">M4 + OS × languages</th><td>.055</td><td>.147</td></tr>
+            </tbody>
+          </table>
+          <p>Outcome: log of the owner-range midpoint. Language coefficient in M1: −0.039 with the “0 – 0” games, +0.010 without. The DLC × languages interaction in M3 holds either way (0.031 and 0.030, p &lt; .001): the DLC link grows with language support.</p>
+        </details>
+      </div>
+    </article>
+
+    <article class="step" data-scene="gg" data-stage="10" data-hud="Stage 10 · Results">
+      <div class="card">
+        <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAaElEQVR42mNgoCYQEZL6TwzGq/H/gy4w/rTNCAVvrZQBY6wGgTggRciGYDMAJg9TSz0DsHkDnwFYwwHZIHwGEB0byIaQpBk9XMjSTLEBRCcgXJqrvJT+n1wUjYJBYkQZQhUDSMoHAw4A1ULkpvse8sYAAAAASUVORK5CYII=" alt="" width="48" height="48"><p class="eyebrow">Stage 10 · Results</p></div>
+        <h2>What the pixels say</h2>
+        <ul class="takeaways">
+          <li>Being easy to reach goes with reaching more players: more systems, more languages.</li>
+          <li>DLC goes with reach too, though popular games also tend to get more DLC.</li>
+          <li>Together these features explain about 15% of the differences in owners. The rest comes down to everything else: genre, quality, price, marketing and luck.</li>
+        </ul>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="after" aria-label="Notes, numbers and credits">
+  <div class="after-inner">
+    <div>
+      <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAASUlEQVR42mNgoBYQEZL6TwrG0FzlpfT/5KJoojBILVZDyHYBsiEf76zDi3FqRjYA5ER0TJIBNHEBzBUD4wKSDRiYMBgmSZkcAACsNlELO7tcagAAAABJRU5ErkJggg==" alt="" width="40" height="40"><h2>Patch notes</h2></div>
+      <p class="sub">Known issues with this data.</p>
+      <ul class="patch">
+        <li><span class="tag">Estimates</span><span>Owners are estimated ranges, not exact counts. The tiers use the lower end of each range.</span></li>
+        <li><span class="tag">Steam only</span><span>“I played AION 2 on the Taiwan server before it ever reached Steam. Steam never counted me.” (@absentminderic)</span></li>
+        <li><span class="tag">Cut-off</span><span>The data stops on 10 March 2025. inZOI launched on 28 March, 18 days too late to make the file.</span></li>
+        <li><span class="tag">Causality</span><span>Everything here is an association. None of these charts can say what causes what.</span></li>
+        <li><span class="tag">Model check</span><span>Stage 9 re-runs our four models with and without the “0 – 0” games. Both versions are in the tables below.</span></li>
+      </ul>
+    </div>
+
+    <div>
+      <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAY0lEQVR42mNgoAYQEZL6Tw5GMaD/8v//1n0fwBKzFizDwCBxkDwIy/uvwDQAJgkzICapYIANoMgLuDBRBhCDcRrw5eMLojBeA0CBhw8TNIBmLiDaALJdABIkBWMYQFFmogQAAO9ixSbI5RaIAAAAAElFTkSuQmCC" alt="" width="40" height="40"><h2>The numbers behind the pixels</h2></div>
+      <p class="sub">Every chart in the story, as a table.</p>
+      <details>
+        <summary>Show all tables</summary>
+        <div class="numbers">
+          <div class="table-wrap"><table class="data"><caption>Clean-up (Stage 2)</caption><thead><tr><th scope="col">Step</th><th scope="col">Games removed</th><th scope="col">Games left</th></tr></thead><tbody><tr><th scope="row">All rows in the file</th><td></td><td>89,624</td></tr><tr><th scope="row">Rows with missing price, DLC, achievements or player counts</th><td>10</td><td>89,614</td></tr><tr><th scope="row">Owner estimate of “0 – 0”</th><td>8,418</td><td>81,196</td></tr><tr><th scope="row">No supported language listed</th><td>79</td><td>81,117</td></tr></tbody></table></div>
+          <div class="table-wrap"><table class="data"><caption>Owner tiers (Stage 3)</caption><thead><tr><th scope="col">Estimated owners</th><th scope="col">Games</th><th scope="col">Share</th></tr></thead><tbody><tr><th scope="row">Legendary (2m+)</th><td>559</td><td>0.7%</td></tr><tr><th scope="row">Epic (500k–2m)</th><td>1,611</td><td>2.0%</td></tr><tr><th scope="row">Rare (100k–500k)</th><td>5,474</td><td>6.7%</td></tr><tr><th scope="row">Uncommon (20k–100k)</th><td>14,231</td><td>17.5%</td></tr><tr><th scope="row">Common (under 20k)</th><td>59,242</td><td>73.0%</td></tr><tr><th scope="row">All</th><td>81,117</td><td>100.0%</td></tr></tbody></table></div>
+          <div class="table-wrap"><table class="data"><caption>Power-ups (Stages 4–6)</caption><thead><tr><th scope="col">Group</th><th scope="col">Games</th><th scope="col">100k+ owners</th><th scope="col">Share 100k+</th></tr></thead><tbody><tr><th scope="row">1 system</th><td>62,124</td><td>4,841</td><td>7.8%</td></tr><tr><th scope="row">2 systems</th><td>10,294</td><td>1,251</td><td>12.2%</td></tr><tr><th scope="row">3 systems</th><td>8,699</td><td>1,552</td><td>17.8%</td></tr><tr><th scope="row">1 language</th><td>43,281</td><td>2,250</td><td>5.2%</td></tr><tr><th scope="row">2–5 languages</th><td>20,289</td><td>1,527</td><td>7.5%</td></tr><tr><th scope="row">6–10 languages</th><td>9,464</td><td>1,900</td><td>20.1%</td></tr><tr><th scope="row">11+ languages</th><td>8,083</td><td>1,967</td><td>24.3%</td></tr><tr><th scope="row">No DLC</th><td>67,948</td><td>4,109</td><td>6.0%</td></tr><tr><th scope="row">Has DLC</th><td>13,169</td><td>3,535</td><td>26.8%</td></tr></tbody></table></div>
+          <div class="table-wrap"><table class="data"><caption>Builds with 1 system (Stages 7–8): share reaching 100k+ owners (games). * fewer than 50 games</caption><thead><tr><th scope="col">Languages \ DLC</th><th scope="col">0</th><th scope="col">1</th><th scope="col">2–5</th><th scope="col">6+</th></tr></thead><tbody><tr><th scope="row">1 language</th><td>3.5% <span style="color:var(--muted)">(30,865)</span></td><td>9.2% <span style="color:var(--muted)">(1,945)</span></td><td>12.2% <span style="color:var(--muted)">(680)</span></td><td>22.2% <span style="color:var(--muted)">(167)</span></td></tr><tr><th scope="row">2–5 languages</th><td>4.7% <span style="color:var(--muted)">(13,720)</span></td><td>11.4% <span style="color:var(--muted)">(1,611)</span></td><td>21.6% <span style="color:var(--muted)">(649)</span></td><td>44.0% <span style="color:var(--muted)">(200)</span></td></tr><tr><th scope="row">6–10 languages</th><td>11.4% <span style="color:var(--muted)">(4,917)</span></td><td>24.9% <span style="color:var(--muted)">(917)</span></td><td>45.9% <span style="color:var(--muted)">(603)</span></td><td>68.2% <span style="color:var(--muted)">(211)</span></td></tr><tr><th scope="row">11+ languages</th><td>11.1% <span style="color:var(--muted)">(4,037)</span></td><td>32.0% <span style="color:var(--muted)">(798)</span></td><td>52.6% <span style="color:var(--muted)">(542)</span></td><td>78.2% <span style="color:var(--muted)">(262)</span></td></tr></tbody></table></div>
+          <div class="table-wrap"><table class="data"><caption>Builds with 2 systems (Stages 7–8): share reaching 100k+ owners (games). * fewer than 50 games</caption><thead><tr><th scope="col">Languages \ DLC</th><th scope="col">0</th><th scope="col">1</th><th scope="col">2–5</th><th scope="col">6+</th></tr></thead><tbody><tr><th scope="row">1 language</th><td>6.0% <span style="color:var(--muted)">(4,392)</span></td><td>10.4% <span style="color:var(--muted)">(617)</span></td><td>19.3% <span style="color:var(--muted)">(166)</span></td><td>40.6% <span style="color:var(--muted)">(32)*</span></td></tr><tr><th scope="row">2–5 languages</th><td>7.1% <span style="color:var(--muted)">(1,885)</span></td><td>14.5% <span style="color:var(--muted)">(346)</span></td><td>28.4% <span style="color:var(--muted)">(141)</span></td><td>44.4% <span style="color:var(--muted)">(18)*</span></td></tr><tr><th scope="row">6–10 languages</th><td>11.0% <span style="color:var(--muted)">(1,041)</span></td><td>27.4% <span style="color:var(--muted)">(266)</span></td><td>49.7% <span style="color:var(--muted)">(143)</span></td><td>73.8% <span style="color:var(--muted)">(42)*</span></td></tr><tr><th scope="row">11+ languages</th><td>17.2% <span style="color:var(--muted)">(807)</span></td><td>45.2% <span style="color:var(--muted)">(228)</span></td><td>63.6% <span style="color:var(--muted)">(121)</span></td><td>75.5% <span style="color:var(--muted)">(49)*</span></td></tr></tbody></table></div>
+          <div class="table-wrap"><table class="data"><caption>Builds with 3 systems (Stages 7–8): share reaching 100k+ owners (games). * fewer than 50 games</caption><thead><tr><th scope="col">Languages \ DLC</th><th scope="col">0</th><th scope="col">1</th><th scope="col">2–5</th><th scope="col">6+</th></tr></thead><tbody><tr><th scope="row">1 language</th><td>8.6% <span style="color:var(--muted)">(3,506)</span></td><td>17.3% <span style="color:var(--muted)">(665)</span></td><td>26.5% <span style="color:var(--muted)">(215)</span></td><td>48.4% <span style="color:var(--muted)">(31)*</span></td></tr><tr><th scope="row">2–5 languages</th><td>11.2% <span style="color:var(--muted)">(1,215)</span></td><td>18.3% <span style="color:var(--muted)">(333)</span></td><td>24.0% <span style="color:var(--muted)">(150)</span></td><td>52.4% <span style="color:var(--muted)">(21)*</span></td></tr><tr><th scope="row">6–10 languages</th><td>17.2% <span style="color:var(--muted)">(797)</span></td><td>40.4% <span style="color:var(--muted)">(349)</span></td><td>66.0% <span style="color:var(--muted)">(144)</span></td><td>82.4% <span style="color:var(--muted)">(34)*</span></td></tr><tr><th scope="row">11+ languages</th><td>19.1% <span style="color:var(--muted)">(766)</span></td><td>46.4% <span style="color:var(--muted)">(265)</span></td><td>65.1% <span style="color:var(--muted)">(146)</span></td><td>87.1% <span style="color:var(--muted)">(62)</span></td></tr></tbody></table></div>
+          <div class="table-wrap"><table class="data"><caption>Models (Stage 9): adjusted R² for log owners</caption><thead><tr><th scope="col">Model</th><th scope="col">With “0 – 0” games (n = 89,584)</th><th scope="col">Without (n = 81,169)</th></tr></thead><tbody><tr><th scope="row">M1 · DLC + OS + languages</th><td>0.053</td><td>0.145</td></tr><tr><th scope="row">M2 · M1 + DLC × OS</th><td>0.053</td><td>0.146</td></tr><tr><th scope="row">M3 · M1 + DLC × languages</th><td>0.055</td><td>0.154</td></tr><tr><th scope="row">M4 · M1 + OS × languages</th><td>0.055</td><td>0.147</td></tr><tr><th scope="row">Language coefficient in M1</th><td>-0.0395</td><td>+0.0103</td></tr></tbody></table></div>
+        </div>
+      </details>
+    </div>
+
+    <div class="credits">
+      <div class="head"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAaElEQVR42mNgoCYQEZL6TwzGq/H/gy4w/rTNCAVvrZQBY6wGgTggRciGYDMAJg9TSz0DsHkDnwFYwwHZIHwGEB0byIaQpBk9XMjSTLEBRCcgXJqrvJT+n1wUjYJBYkQZQhUDSMoHAw4A1ULkpvse8sYAAAAASUVORK5CYII=" alt="" width="40" height="40"><h2>Credits</h2></div>
+      <p>Made by Jingyi, <a href="https://github.com/absentminderic" target="_blank" rel="noopener">@absentminderic</a>, <a href="https://kenetizen.github.io/" target="_blank" rel="noopener">Kenetizen.github.io</a>, <a href="https://github.com/letitgotia" target="_blank" rel="noopener">@letitgotia</a> and Vivian for NMC5344, November 2026.</p>
+      <p>Data: Steam Games Dataset 2025 (store data up to 10 March 2025). Analysis in R; every pixel and sprite on this page is drawn with plain JavaScript and hand-placed pixels.</p>
+      <p class="links">
+        <a href="https://www.kaggle.com/datasets/artermiloff/steam-games-dataset" target="_blank" rel="noopener">Dataset on Kaggle</a>
+        <a href="../report/Group_Project_1111_1013.pdf" target="_blank" rel="noopener">Full report (PDF)</a>
+        <a href="../report/Group_Project_1111_1013.html" target="_blank" rel="noopener">Report with R code (HTML)</a>
+        <a href="../steam-3d-city/" target="_blank" rel="noopener">Steam Town, the 3D version</a>
+        <a href="../">Project home</a>
+      </p>
+      <p class="psst">Psst. ↑ ↑ ↓ ↓ ← → ← → B A</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAaElEQVR42mNgoCYQEZL6TwzGq/H/gy4w/rTNCAVvrZQBY6wGgTggRciGYDMAJg9TSz0DsHkDnwFYwwHZIHwGEB0byIaQpBk9XMjSTLEBRCcgXJqrvJT+n1wUjYJBYkQZQhUDSMoHAw4A1ULkpvse8sYAAAAASUVORK5CYII=" alt="" width="32" height="32"><span id="toast-text"></span></div>
+
+<script>
+(() => {
+  'use strict';
+  // Counts per [systems 1-3][languages 1 / 2-5 / 6-10 / 11+][DLC 0 / 1 / 2-5 / 6+][owner tier 0-4],
+  // re-derived from the team's R code (Group_Project_1511.Rmd) on games_march2025_cleaned_2026_1105.xlsx.
+  const CELLS = [[[[25360,4417,933,135,20],[1296,470,142,36,1],[444,153,68,12,3],[87,43,29,5,3]],[[10922,2159,527,96,16],[999,428,159,25,0],[333,176,102,29,9],[50,62,55,23,10]],[[3426,930,405,126,30],[422,267,156,61,11],[169,157,169,86,22],[30,37,62,55,27]],[[2980,609,279,113,56],[350,193,163,72,20],[143,114,157,84,44],[29,28,66,72,67]]],[[[3385,742,225,33,7],[389,164,53,7,4],[86,48,20,11,1],[10,9,10,2,1]],[[1398,353,114,19,1],[203,93,41,6,3],[67,34,27,12,1],[3,7,4,3,1]],[[694,233,82,23,9],[109,84,59,11,3],[37,35,53,13,5],[5,6,9,12,10]],[[483,185,91,40,8],[64,61,67,19,17],[24,20,41,27,9],[7,5,6,17,14]]],[[[2515,689,262,38,2],[375,175,91,19,5],[115,43,46,10,1],[11,5,13,1,1]],[[807,272,111,21,4],[175,97,47,9,5],[65,49,28,6,2],[4,6,7,1,3]],[[456,204,105,23,9],[107,101,99,31,11],[24,25,50,31,14],[4,2,11,6,11]],[[461,159,97,35,14],[88,54,73,43,7],[26,25,48,33,14],[5,3,12,19,23]]]];
+  const REMOVED = [10, 8418, 79]; // broken rows, "0 - 0" owner estimates, no language listed
+
+  const SYS_L = ['1 system', '2 systems', '3 systems'];
+  const LANG_L = ['1 language', '2–5 languages', '6–10 languages', '11+ languages'];
+  const DLC_L = ['no DLC', '1 DLC', '2–5 DLC', '6+ DLC'];
+  const TIER_L = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
+  const TIER_R = ['under 20k', '20k–100k', '100k–500k', '500k–2m', '2m+'];
+  const fmt = n => n.toLocaleString('en-US');
+  const pc = (a, b) => (b ? (100 * a / b).toFixed(1) : '0.0') + '%';
+  const sum = a => a.reduce((x, y) => x + y, 0);
+  const reachOf = c => c[2] + c[3] + c[4];
+  const DUR = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 950;
+
+  // ---------- one entry per game ----------
+  let KEPT = 0;
+  for (const a of CELLS) for (const b of a) for (const c of b) KEPT += sum(c);
+  const N = KEPT + sum(REMOVED);
+  const tier = new Uint8Array(N), sys = new Uint8Array(N), lang = new Uint8Array(N), dlc = new Uint8Array(N), gone = new Uint8Array(N);
+  {
+    let i = 0;
+    for (let s = 0; s < 3; s++) for (let l = 0; l < 4; l++) for (let d = 0; d < 4; d++) for (let t = 0; t < 5; t++)
+      for (let k = CELLS[s][l][d][t]; k > 0; k--) { tier[i] = t; sys[i] = s; lang[i] = l; dlc[i] = d; i++; }
+    REMOVED.forEach((n, r) => { for (let k = 0; k < n; k++) { gone[i] = r + 1; i++; } });
+  }
+  function rng(seed) {
+    return () => {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  const rand = rng(5344);
+  const order = new Uint32Array(N);
+  for (let k = 0; k < N; k++) order[k] = k;
+  for (let k = N - 1; k > 0; k--) { const j = Math.floor(rand() * (k + 1)); const t = order[k]; order[k] = order[j]; order[j] = t; }
+  const jit = new Float32Array(N), rx = new Float32Array(N), ry = new Float32Array(N);
+  for (let k = 0; k < N; k++) { jit[k] = rand(); rx[k] = rand(); ry[k] = rand(); }
+  const keptOrder = order.filter(k => gone[k] === 0);
+
+  function makeGroups(keyFn, labels) {
+    const buckets = labels.map(() => [[], [], [], [], []]);
+    for (let k = 0; k < keptOrder.length; k++) { const idx = keptOrder[k]; buckets[keyFn(idx)][tier[idx]].push(idx); }
+    return labels.map((label, g) => {
+      const b = buckets[g];
+      const idx = b[4].concat(b[3], b[2], b[1], b[0]);
+      const counts = b.map(x => x.length);
+      return { label, idx, n: idx.length, counts, reach: reachOf(counts) };
+    });
+  }
+  const groupCache = {};
+  function groups(name) {
+    if (!groupCache[name]) {
+      groupCache[name] =
+        name === 'all' ? makeGroups(() => 0, ['All games']) :
+        name === 'systems' ? makeGroups(i => sys[i], SYS_L) :
+        name === 'languages' ? makeGroups(i => lang[i], LANG_L) :
+        makeGroups(i => (dlc[i] > 0 ? 1 : 0), ['No DLC', 'Has DLC']);
+    }
+    return groupCache[name];
+  }
+
+  // ---------- canvas ----------
+  const canvas = document.getElementById('field');
+  const ctx = canvas.getContext('2d', { alpha: false });
+  const glow = document.getElementById('glow');
+  const gctx = glow.getContext('2d');
+  const labelsEl = document.getElementById('labels');
+  const tipEl = document.getElementById('tip');
+  const stepsEl = document.querySelector('.steps');
+  const hudEl = document.querySelector('.hud');
+  const HID = 0, RAW = 1, RED = 2, T = 3, EXP = 8, UNX = 9, GOLD = 10, GOLD_HI = 11;
+  const PAL = new Uint32Array(12);
+  let BG = 0;
+  function abgr(hex) {
+    const h = hex.trim().replace('#', '');
+    const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+    return ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0;
+  }
+  function loadPalette() {
+    const cs = getComputedStyle(document.documentElement);
+    const v = n => abgr(cs.getPropertyValue(n));
+    BG = v('--bg'); PAL[RAW] = v('--raw'); PAL[RED] = v('--removed');
+    for (let t = 0; t < 5; t++) PAL[T + t] = v('--t' + t);
+    PAL[EXP] = v('--explained'); PAL[UNX] = v('--unexplained');
+    PAL[GOLD] = v('--gold'); PAL[GOLD_HI] = v('--gold-hi');
+  }
+
+  let W = 1, H = 1, SC = 1, cssW = 0, cssH = 0, img = null, buf = null;
+  function sizeCanvas() {
+    cssW = canvas.clientWidth || window.innerWidth;
+    cssH = canvas.clientHeight || window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let w = Math.max(1, Math.round(cssW * dpr)), h = Math.max(1, Math.round(cssH * dpr));
+    const cap = 4200000;
+    if (w * h > cap) { const f = Math.sqrt(cap / (w * h)); w = Math.round(w * f); h = Math.round(h * f); }
+    W = w; H = h; SC = W / cssW;
+    canvas.width = W; canvas.height = H;
+    img = ctx.createImageData(W, H);
+    buf = new Uint32Array(img.data.buffer);
+    glow.width = Math.max(1, Math.round(W / 4)); glow.height = Math.max(1, Math.round(H / 4));
+    gctx.imageSmoothingEnabled = true;
+  }
+  const isWide = () => cssW >= 900;
+  let activeCard = document.querySelector('.step .card');
+  // The part of the screen the pixels may use, in canvas pixels.
+  function region(phoneBottom) {
+    const cs = getComputedStyle(stepsEl);
+    const gl = parseFloat(cs.paddingLeft) || 16, gr = parseFloat(cs.paddingRight) || 16;
+    const top = hudEl.getBoundingClientRect().bottom;
+    let x0, x1, y0, y1;
+    if (isWide()) {
+      const col = Math.min(400, cssW * 0.4) + 24;
+      x0 = gl + col + 48; x1 = cssW - gr - 16; y0 = top + 28; y1 = cssH - 32;
+    } else {
+      // Phones: keep the pixels above the active box while the box sits at the bottom.
+      const cardH = activeCard ? activeCard.offsetHeight + 12 : 0;
+      x0 = gl; x1 = cssW - gr; y0 = top + 16;
+      y1 = Math.max(y0 + 150, Math.min(Math.round(cssH * (phoneBottom || 0.62)), Math.round(cssH * 0.95 - cardH - 14)));
+    }
+    return { x: Math.round(x0 * SC), y: Math.round(y0 * SC), w: Math.max(10, Math.round((x1 - x0) * SC)), h: Math.max(10, Math.round((y1 - y0) * SC)) };
+  }
+
+  // ---------- animation state ----------
+  const cx = new Float32Array(N), cy = new Float32Array(N), sx = new Float32Array(N), sy = new Float32Array(N);
+  const tx = new Float32Array(N), ty = new Float32Array(N), dl = new Float32Array(N);
+  const cc = new Uint8Array(N), sc = new Uint8Array(N), tc = new Uint8Array(N);
+  let t0 = 0, running = false, sizeFrom = 1, sizeTo = 1, curSize = 1, maxDelay = 0, override = -1;
+  let lastFrameAt = 0, settleTimer = 0;
+  const ease = k => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+
+  function present() {
+    ctx.putImageData(img, 0, 0);
+    gctx.clearRect(0, 0, glow.width, glow.height);
+    gctx.drawImage(canvas, 0, 0, glow.width, glow.height);
+  }
+  // Background tabs pause requestAnimationFrame; this paints the end state anyway.
+  function settleLater(total) {
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => {
+      if (!running || performance.now() - lastFrameAt < 300) return;
+      cx.set(tx); cy.set(ty); cc.set(tc);
+      curSize = sizeTo; running = false;
+      paintStatic();
+    }, total + 150);
+  }
+  function frame(now) {
+    lastFrameAt = performance.now();
+    const t = now - t0;
+    const total = DUR + maxDelay;
+    const g = total > 0 ? Math.min(1, t / total) : 1;
+    curSize = Math.max(1, Math.round(sizeFrom + (sizeTo - sizeFrom) * g));
+    const s = curSize;
+    buf.fill(BG);
+    let active = false;
+    for (let i = 0; i < N; i++) {
+      const k = DUR > 0 ? (t - dl[i]) / DUR : 1;
+      let px, py, col;
+      if (k >= 1) { px = tx[i]; py = ty[i]; col = tc[i]; }
+      else if (k <= 0) { px = sx[i]; py = sy[i]; col = sc[i]; active = true; }
+      else { const e = ease(k); px = sx[i] + (tx[i] - sx[i]) * e; py = sy[i] + (ty[i] - sy[i]) * e; col = k < 0.5 ? sc[i] : tc[i]; active = true; }
+      cx[i] = px; cy[i] = py; cc[i] = col;
+      if (col === HID) continue;
+      const x = Math.round(px), y = Math.round(py);
+      if (x < 0 || y < 0 || x + s > W || y + s > H) continue;
+      const c = override >= 0 ? PAL[override] : PAL[col];
+      let o = y * W + x;
+      if (s === 1) buf[o] = c;
+      else for (let r = 0; r < s; r++, o += W) buf.fill(c, o, o + s);
+    }
+    present();
+    if (active || g < 1) requestAnimationFrame(frame); else running = false;
+  }
+  function paintStatic() {
+    buf.fill(BG);
+    const s = curSize;
+    for (let i = 0; i < N; i++) {
+      const col = cc[i];
+      if (col === HID) continue;
+      const x = Math.round(cx[i]), y = Math.round(cy[i]);
+      if (x < 0 || y < 0 || x + s > W || y + s > H) continue;
+      const c = override >= 0 ? PAL[override] : PAL[col];
+      let o = y * W + x;
+      if (s === 1) buf[o] = c;
+      else for (let r = 0; r < s; r++, o += W) buf.fill(c, o, o + s);
+    }
+    present();
+  }
+
+  // ---------- layouts ----------
+  function hideGone() { for (let i = KEPT; i < N; i++) { tx[i] = cx[i]; ty[i] = H + 40; tc[i] = HID; dl[i] = 0; } }
+
+  // Stacked full-width blocks, filled column by column, so each block reads as a 100% bar.
+  function layoutBlocks(gs, R, colorFn, rightFn) {
+    const n = gs.length;
+    const labH = Math.round(28 * SC), gap = n > 1 ? Math.round(16 * SC) : 0;
+    const avail = R.h - n * labH - (n - 1) * gap;
+    let p = Math.max(1, Math.round(9 * SC)), rows = null;
+    for (; p >= 1; p--) {
+      const cols = Math.max(1, Math.floor(R.w / p));
+      rows = gs.map(g => Math.max(1, Math.ceil(g.n / cols)));
+      if (p === 1 || sum(rows) * p <= avail) break;
+    }
+    const used = sum(rows) * p + n * labH + (n - 1) * gap;
+    let y = R.y + Math.max(0, Math.floor((R.h - used) / 2));
+    const blocks = [], labels = [];
+    gs.forEach((g, gi) => {
+      const r = rows[gi], top = y + labH;
+      for (let k = 0; k < g.n; k++) {
+        const idx = g.idx[k];
+        tx[idx] = R.x + Math.floor(k / r) * p;
+        ty[idx] = top + (k % r) * p;
+        tc[idx] = colorFn(idx);
+        dl[idx] = ((tx[idx] - R.x) / R.w) * 380 + jit[idx] * 260;
+      }
+      blocks.push({ g, x: R.x, y: top, w: Math.ceil(g.n / r) * p, h: r * p, rows: r, p });
+      labels.push({ x: R.x / SC, y: y / SC + 3, w: R.w / SC, html: `<span><b>${g.label}</b> · ${fmt(g.n)}</span><span>${rightFn(g)}</span>` });
+      y = top + r * p + gap;
+    });
+    return { s: p >= 3 ? p - 1 : p, blocks, labels };
+  }
+
+  // A 10 x 10 waffle drawn with game pixels: each square is 1% of a group. A square has k x k
+  // pixel slots; when a square gets more games than slots, the extra games share slots.
+  // colorAt(u) colors fill position u in [0, 1), so the fill is exact to the slot.
+  function layoutWaffle(list, R, colorAt, delayFn) {
+    const p = Math.max(2, Math.round(1.8 * SC)), gp = Math.max(2 * p, Math.round(5 * SC));
+    const side = Math.min(R.w, R.h);
+    const k = Math.max(2, Math.floor((side - 9 * gp) / 10 / p)), sq = k * p, bw = 10 * sq + 9 * gp;
+    const ox = R.x + Math.floor((R.w - bw) / 2), oy = R.y + Math.max(0, Math.floor((R.h - bw) / 2));
+    const n = list.length, base = Math.floor(n / 100), rem = n % 100;
+    let j = 0;
+    for (let q = 0; q < 100; q++) {
+      const cnt = base + (q < rem ? 1 : 0), used = Math.max(1, Math.min(cnt, k * k));
+      const qx = ox + (q % 10) * (sq + gp), qy = oy + Math.floor(q / 10) * (sq + gp);
+      for (let m = 0; m < cnt; m++, j++) {
+        const idx = list[j], slot = m % used;
+        tx[idx] = qx + (slot % k) * p;
+        ty[idx] = qy + Math.floor(slot / k) * p;
+        tc[idx] = colorAt((q + (slot + 0.5) / used) / 100);
+        dl[idx] = delayFn ? delayFn(q, idx) : q * 7 + jit[idx] * 220;
+      }
+    }
+    return { s: p >= 3 ? p - 1 : p, box: { x: ox, y: oy, w: bw, h: bw } };
+  }
+  function tierColorAt(counts) {
+    const n = sum(counts), cut = [];
+    let acc = 0;
+    for (let t = 4; t >= 0; t--) { acc += counts[t] / n; cut.push([acc, T + t]); }
+    return u => { for (const [c, col] of cut) if (u < c) return col; return T; };
+  }
+  function waffleLabel(box, l1, l2, cls) {
+    return { x: box.x / SC, y: (box.y + box.h) / SC + 10, w: box.w / SC, cls: 'center ' + (cls || ''), html: `<span>${l1}</span><span>${l2}</span>` };
+  }
+  const reachText = g => pc(g.reach, g.n) + ' reach 100k+';
+
+  function blockScene(name) {
+    const R = region();
+    hideGone();
+    const L = layoutBlocks(groups(name), R, i => T + tier[i], reachText);
+    L.hover = true;
+    return L;
+  }
+  function comboScene(d) {
+    const R = region(0.6);
+    hideGone();
+    const half = Math.floor(keptOrder.length / 2);
+    const A = keptOrder.subarray(0, half), B = keptOrder.subarray(half);
+    const gap = Math.round(28 * SC), lab = Math.round(62 * SC);
+    const w = Math.floor((R.w - gap) / 2);
+    const cA = CELLS[0][0][d], cB = CELLS[0][3][d];
+    const LA = layoutWaffle(A, { x: R.x, y: R.y, w, h: R.h - lab }, tierColorAt(cA));
+    const LB = layoutWaffle(B, { x: R.x + w + gap, y: R.y, w, h: R.h - lab }, tierColorAt(cB));
+    return {
+      s: Math.min(LA.s, LB.s),
+      labels: [
+        waffleLabel(LA.box, `<b>${pc(reachOf(cA), sum(cA))}</b>`, `1 language · ${fmt(sum(cA))} games`, 'big'),
+        waffleLabel(LB.box, `<b>${pc(reachOf(cB), sum(cB))}</b>`, `11+ languages · ${fmt(sum(cB))} games`, 'big')
+      ]
+    };
+  }
+  const build = { s: 0, l: 0, d: 0 };
+  function builderScene() {
+    const R = region(0.6);
+    hideGone();
+    const c = CELLS[build.s][build.l][build.d], n = sum(c);
+    const L = layoutWaffle(keptOrder, { x: R.x, y: R.y, w: R.w, h: R.h - Math.round(58 * SC) }, tierColorAt(c), (q, idx) => q * 6 + jit[idx] * 90);
+    return {
+      s: L.s,
+      labels: [waffleLabel(L.box, `<b>${pc(reachOf(c), n)}</b>`,
+        `${SYS_L[build.s]} · ${LANG_L[build.l]} · ${DLC_L[build.d]} · ${fmt(n)} games${n < 50 ? ' · small sample' : ''}`, 'big')]
+    };
+  }
+  function modelScene(frac, l1, l2) {
+    const R = region(0.6);
+    hideGone();
+    const L = layoutWaffle(keptOrder, { x: R.x, y: R.y, w: R.w, h: R.h - Math.round(58 * SC) }, u => (u < frac ? EXP : UNX), (q, idx) => q * 9 + jit[idx] * 120);
+    return { s: L.s, labels: [waffleLabel(L.box, l1, l2, 'big')] };
+  }
+  const GG_ROWS = ['.###...###.', '#...#.#...#', '#.....#....', '#.###.#.###', '#...#.#...#', '#...#.#...#', '.###...###.'];
+  function ggScene() {
+    const R = region(0.6);
+    hideGone();
+    const cells = [];
+    GG_ROWS.forEach((row, ry0) => [...row].forEach((ch, rx0) => { if (ch === '#') cells.push([rx0, ry0]); }));
+    const n = keptOrder.length, base = Math.floor(n / cells.length), rem = n % cells.length;
+    const lab = Math.round(44 * SC);
+    const p = Math.max(2, Math.round(1.8 * SC)), gp = p;
+    const k = Math.max(2, Math.floor(Math.min((R.w - 10 * gp) / 11, (R.h - lab - 6 * gp) / 7) / p)), cs = k * p;
+    const bw = 11 * cs + 10 * gp, bh = 7 * cs + 6 * gp;
+    const ox = R.x + Math.floor((R.w - bw) / 2), oy = R.y + Math.max(0, Math.floor((R.h - lab - bh) / 2));
+    let j = 0;
+    cells.forEach(([gx, gy], ci) => {
+      const cnt = base + (ci < rem ? 1 : 0), used = Math.max(1, Math.min(cnt, k * k));
+      for (let m = 0; m < cnt; m++, j++) {
+        const idx = keptOrder[j], slot = m % used;
+        tx[idx] = ox + gx * (cs + gp) + (slot % k) * p;
+        ty[idx] = oy + gy * (cs + gp) + Math.floor(slot / k) * p;
+        tc[idx] = jit[idx] > 0.93 ? EXP : jit[idx] > 0.55 ? GOLD_HI : GOLD;
+        dl[idx] = ci * 22 + jit[idx] * 320;
+      }
+    });
+    return { s: p >= 3 ? p - 1 : p, labels: [waffleLabel({ x: ox, y: oy, w: bw, h: bh }, '<b>GG</b>', 'thanks for playing', 'big')] };
+  }
+
+  const ALL = { label: 'All games in the file', idx: order, n: N };
+  const SCENES = {
+    scatter() {
+      const s = Math.max(1, Math.round(SC));
+      for (let i = 0; i < N; i++) { tx[i] = rx[i] * (W - s); ty[i] = ry[i] * (H - s); tc[i] = RAW; dl[i] = jit[i] * 400; }
+      return { s, labels: [] };
+    },
+    grid() { return layoutBlocks([ALL], region(), () => RAW, () => '1 pixel = 1 game'); },
+    funnel() {
+      const L = layoutBlocks([ALL], region(), i => (gone[i] ? RED : RAW), () => '<span><i class="sq red"></i>8,507 to remove</span>');
+      for (let i = 0; i < N; i++) dl[i] = gone[i] ? jit[i] * 500 : 0;
+      L.next = [1300, () => {
+        const L2 = layoutBlocks([{ label: 'Games left', idx: keptOrder, n: KEPT }], region(), () => RAW, () => '8,507 removed');
+        for (let i = 0; i < N; i++) {
+          if (gone[i]) { tx[i] = cx[i]; ty[i] = H + 30 + jit[i] * H * 0.4; tc[i] = RED; dl[i] = jit[i] * 350; }
+          else dl[i] = 250 + dl[i] * 0.6;
+        }
+        return L2;
+      }];
+      return L;
+    },
+    tiers: () => blockScene('all'),
+    systems: () => blockScene('systems'),
+    languages: () => blockScene('languages'),
+    dlc: () => blockScene('dlc'),
+    combo0: () => comboScene(0),
+    combo6: () => comboScene(3),
+    builder: builderScene,
+    'model-before': () => modelScene(0.0551, '<b>5.5%</b>', 'explained · each square is 1% of the differences in owners'),
+    'model-after': () => modelScene(0.154, '<b>15.4%</b>', 'explained once the “0 – 0” games are out (was 5.5%)'),
+    gg: ggScene
+  };
+
+  // ---------- 8-bit sound (off until the viewer turns it on) ----------
+  const soundBtn = document.getElementById('sound');
+  let audio = null, soundOn = false;
+  function blip(notes, step, type) {
+    if (!soundOn || !audio) return;
+    const st = step || 0.07, t = audio.currentTime + 0.01;
+    notes.forEach((f, i) => {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = type || 'square';
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t + i * st);
+      g.gain.exponentialRampToValueAtTime(0.05, t + i * st + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i * st + st * 0.95);
+      o.connect(g); g.connect(audio.destination);
+      o.start(t + i * st); o.stop(t + i * st + st);
+    });
+  }
+  soundBtn.addEventListener('click', () => {
+    soundOn = !soundOn;
+    soundBtn.setAttribute('aria-pressed', String(soundOn));
+    soundBtn.textContent = soundOn ? '♪ On' : '♪ Off';
+    if (soundOn) {
+      try {
+        audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+        if (audio.resume) audio.resume();
+        blip([523, 659, 784, 1047]);
+      } catch (err) { soundOn = false; soundBtn.setAttribute('aria-pressed', 'false'); soundBtn.textContent = '♪ Off'; }
+    }
+  });
+  const SFX = {
+    funnel: [[392, 330, 262, 196], 0.08], tiers: [[523, 784, 1047], 0.07], 'model-before': [[196, 185, 175, 165], 0.12, 'sawtooth'],
+    'model-after': [[392, 523, 659, 784, 1047], 0.07], gg: [[523, 659, 784, 1047, 784, 1047], 0.09]
+  };
+
+  // ---------- scene switching ----------
+  let current = 'scatter', nextTimer = 0, hoverBlocks = null;
+  function setLabels(list) {
+    labelsEl.innerHTML = list.map(l =>
+      `<div class="lbl ${l.cls || ''}" style="left:${l.x.toFixed(1)}px;top:${l.y.toFixed(1)}px;width:${l.w.toFixed(1)}px">${l.html}</div>`).join('');
+  }
+  function commit(res, instant) {
+    setLabels(res.labels || []);
+    hoverBlocks = res.hover ? res.blocks : null;
+    tipEl.hidden = true;
+    maxDelay = 0;
+    for (let i = 0; i < N; i++) if (dl[i] > maxDelay) maxDelay = dl[i];
+    if (instant || DUR === 0) {
+      cx.set(tx); cy.set(ty); cc.set(tc);
+      curSize = sizeFrom = sizeTo = res.s;
+      paintStatic();
+      return;
+    }
+    sx.set(cx); sy.set(cy); sc.set(cc);
+    sizeFrom = curSize; sizeTo = res.s; t0 = performance.now();
+    if (!running) { running = true; requestAnimationFrame(frame); }
+    settleLater(DUR + maxDelay);
+  }
+  function applyScene(name, instant) {
+    clearTimeout(nextTimer);
+    const res = SCENES[name]();
+    commit(res, instant);
+    if (res.next) {
+      if (instant || DUR === 0) commit(res.next[1](), true);
+      else nextTimer = setTimeout(() => { if (current === name) commit(res.next[1](), false); }, res.next[0]);
+    }
+  }
+
+  // ---------- HUD, steps, achievements ----------
+  const hudLabel = document.getElementById('hud-label');
+  const segs = [...document.querySelectorAll('.hud-bar i')];
+  const toastEl = document.getElementById('toast'), toastText = document.getElementById('toast-text');
+  let toastTimer = 0;
+  function toast(msg) {
+    toastText.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2800);
+  }
+  const ACH = { funnel: 'Achievement unlocked: Data janitor', combo6: 'Achievement unlocked: Triple combo', 'model-after': 'Achievement unlocked: Plot twist' };
+  const seen = new Set();
+  function setHud(step) {
+    hudLabel.textContent = step.dataset.hud;
+    const n = +step.dataset.stage;
+    segs.forEach((s, i) => s.classList.toggle('on', i <= n));
+  }
+  function activate(step) {
+    setHud(step);
+    const name = step.dataset.scene;
+    if (name === current) return;
+    current = name;
+    activeCard = step.querySelector('.card');
+    applyScene(name, false);
+    const fx = SFX[name] || [[660, 880], 0.06];
+    blip(fx[0], fx[1], fx[2]);
+    if (ACH[name] && !seen.has(name)) { seen.add(name); toast(ACH[name]); }
+  }
+  const steps = [...document.querySelectorAll('.step')];
+  const io = new IntersectionObserver(entries => {
+    for (const e of entries) if (e.isIntersecting) activate(e.target);
+  }, { rootMargin: '-45% 0px -54% 0px' });
+
+  // ---------- hover tooltips on the blocks ----------
+  function onPointer(e) {
+    if (!hoverBlocks || !e.target.closest || e.target.closest('.card, .hud, .after')) { tipEl.hidden = true; return; }
+    const rect = canvas.getBoundingClientRect();
+    const lx = e.clientX - rect.left, ly = e.clientY - rect.top;
+    const px = lx * SC, py = ly * SC;
+    for (const b of hoverBlocks) {
+      if (px < b.x || px >= b.x + b.w || py < b.y || py >= b.y + b.h) continue;
+      const k = Math.floor((px - b.x) / b.p) * b.rows + Math.floor((py - b.y) / b.p);
+      if (k >= b.g.n) break;
+      const t = tier[b.g.idx[k]];
+      tipEl.innerHTML = `<b>${b.g.label}</b><span><i class="sq" style="background:var(--t${t})"></i>${TIER_L[t]} · ${TIER_R[t]} owners</span><span>${fmt(b.g.counts[t])} games · ${pc(b.g.counts[t], b.g.n)}</span>`;
+      tipEl.hidden = false;
+      const tw = tipEl.offsetWidth, th = tipEl.offsetHeight;
+      let x = lx + 14, y = ly + 14;
+      if (x + tw > cssW - 8) x = lx - tw - 14;
+      if (y + th > cssH - 8) y = ly - th - 14;
+      tipEl.style.left = Math.max(8, x) + 'px';
+      tipEl.style.top = Math.max(8, y) + 'px';
+      return;
+    }
+    tipEl.hidden = true;
+  }
+  window.addEventListener('pointermove', onPointer, { passive: true });
+  window.addEventListener('pointerdown', onPointer, { passive: true });
+  window.addEventListener('scroll', () => { tipEl.hidden = true; }, { passive: true });
+
+  // ---------- build-a-game ----------
+  const form = document.getElementById('builder');
+  const bPct = document.getElementById('b-pct'), bText = document.getElementById('b-text'), bWarn = document.getElementById('b-warn');
+  let best = [0, 0, 0], bestShare = -1;
+  for (let s = 0; s < 3; s++) for (let l = 0; l < 4; l++) for (let d = 0; d < 4; d++) {
+    const c = CELLS[s][l][d], n = sum(c);
+    if (n >= 50 && reachOf(c) / n > bestShare) { bestShare = reachOf(c) / n; best = [s, l, d]; }
+  }
+  function updateBuilderText() {
+    const c = CELLS[build.s][build.l][build.d], n = sum(c);
+    bPct.textContent = pc(reachOf(c), n);
+    const common = build.s === 0 && build.l === 0 && build.d === 0;
+    const top = build.s === best[0] && build.l === best[1] && build.d === best[2];
+    bText.textContent = `of the ${fmt(n)} games with this build reached 100,000+ owners.` +
+      (common ? ' It is the most common build on Steam.' : top ? ' The best odds of any build with at least 50 games.' : '');
+    bWarn.hidden = n >= 50;
+    bWarn.textContent = n < 50 ? `Only ${n} games have this build, so this number can swing a lot.` : '';
+  }
+  function setBuild(s, l, d) {
+    form.elements.sys.value = String(s); form.elements.lang.value = String(l); form.elements.dlc.value = String(d);
+    readBuild();
+  }
+  function readBuild() {
+    build.s = +form.elements.sys.value; build.l = +form.elements.lang.value; build.d = +form.elements.dlc.value;
+    updateBuilderText();
+    blip([988], 0.05);
+    if (current === 'builder') applyScene('builder', false);
+  }
+  form.addEventListener('change', readBuild);
+  form.addEventListener('submit', e => e.preventDefault());
+  document.getElementById('pick-common').addEventListener('click', () => setBuild(0, 0, 0));
+  document.getElementById('pick-best').addEventListener('click', () => setBuild(best[0], best[1], best[2]));
+
+  // ---------- cheat code ----------
+  const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+  let kpos = 0;
+  window.addEventListener('keydown', e => {
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    kpos = key === KONAMI[kpos] ? kpos + 1 : key === KONAMI[0] ? 1 : 0;
+    if (kpos === KONAMI.length) {
+      kpos = 0;
+      override = T + 4; paintStatic();
+      blip([523, 659, 784, 1047, 1319, 1568], 0.06);
+      toast('Cheat on: every game is Legendary. In real life only 559 are (0.7%).');
+      setTimeout(() => { override = -1; paintStatic(); }, 3200);
+    }
+  });
+
+  // ---------- start ----------
+  loadPalette();
+  sizeCanvas();
+  updateBuilderText();
+  commit(SCENES.scatter(), true);
+  steps.forEach(s => io.observe(s));
+  let resizeTimer = 0;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (Math.abs(canvas.clientWidth - cssW) < 1 && Math.abs(canvas.clientHeight - cssH) < 1) return;
+      sizeCanvas();
+      applyScene(current, true);
+    }, 150);
+  });
+})();
+</script>
+</body>
+</html>

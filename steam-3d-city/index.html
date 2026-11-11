@@ -1,0 +1,3425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Steam Town</title>
+<meta name="description" content="A toon-shaded megastructure city under jacaranda trees where one floor is one percent: a 3D tour of our NMC5344 Steam games analysis.">
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mNgGH5AREjqPz5MUPOXjy/+91/+D8bWfR9QsLz/CtyGoGvGZgBOQwg5m6B3QBxCNsNsh2GsriDWALzhQMgAomKC5BjAZgjZmtENIUszevQO7rwDACdN2ACDy1CCAAAAAElFTkSuQmCC">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<style>
+/* Layout: a full-screen megastructure diorama; glass UI floats over it (brand top-left, dock bottom,
+   tour card right on wide screens and as a bottom sheet on phones). The scene has its own
+   day / golden / night lighting, so the UI follows that mode instead of the OS theme. */
+:root {
+  color-scheme: light;
+  --ink: #2b2238;
+  --ink-2: #5b5470;
+  --glass: rgba(255, 255, 255, .76);
+  --glass-strong: rgba(255, 255, 255, .93);
+  --edge: rgba(255, 255, 255, .95);
+  --line: rgba(43, 34, 56, .12);
+  --accent: #8a6ad6;
+  --accent-deep: #6a4fc2;
+  --accent-soft: #efe9fc;
+  --on-accent: #ffffff;
+  --shadow: 0 14px 40px rgba(60, 40, 110, .18);
+  --t0: #7d8496; --t1: #369e4e; --t2: #2d74d6; --t3: #b073da; --t4: #e08a1c;
+  --f-ui: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+  --f-sign: "Big Shoulders Display", "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+  --bg: #cfe6f7;
+  --card: #fdfcff;
+}
+body[data-time="night"] {
+  color-scheme: dark;
+  --ink: #f2efff;
+  --ink-2: #c3bde0;
+  --glass: rgba(24, 26, 58, .62);
+  --glass-strong: rgba(28, 30, 66, .9);
+  --edge: rgba(255, 255, 255, .22);
+  --line: rgba(255, 255, 255, .16);
+  --accent-deep: #cdbdff;
+  --accent-soft: rgba(138, 106, 214, .26);
+  --shadow: 0 14px 40px rgba(0, 0, 0, .45);
+  --bg: #121633;
+  --card: #1d1f45;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--f-ui); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+button:focus-visible, a:focus-visible, label:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+.sprite { image-rendering: pixelated; display: block; }
+#scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+#scene.pointing { cursor: pointer; }
+
+/* loading screen */
+.loader {
+  position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+  background: linear-gradient(180deg, #7dbbea 0%, #cfe8f9 55%, #fdf0e2 100%);
+  transition: opacity .9s ease;
+}
+.loader.done { opacity: 0; pointer-events: none; }
+.loader-inner { width: min(380px, calc(100vw - 48px)); text-align: center; color: #2b2238; }
+.loader h1 { margin: 0 0 6px; font-size: 2.2rem; font-weight: 900; letter-spacing: .02em; }
+.loader p { margin: 0 0 18px; color: #5b5470; }
+.bar { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .7); overflow: hidden; box-shadow: inset 0 0 0 2px #fff; }
+.bar i { display: block; height: 100%; width: 0%; border-radius: 99px; background: linear-gradient(90deg, #b9a2ee, #8a6ad6); transition: width .25s ease; }
+.loader .msg { margin-top: 10px; font-size: .8125rem; color: #5b5470; }
+
+/* brand */
+.brand {
+  position: fixed; z-index: 5;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  left: max(14px, env(safe-area-inset-left, 0px));
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px 10px 10px; border-radius: 20px;
+  background: var(--glass); backdrop-filter: blur(12px) saturate(1.2);
+  border: 1.5px solid var(--edge); box-shadow: var(--shadow);
+  max-width: min(440px, calc(100vw - 28px));
+}
+.brand .sprite { width: 40px; height: 40px; flex: none; }
+.brand h1 { margin: 0; font-size: 1.25rem; font-weight: 900; line-height: 1.1; }
+.brand p { margin: 2px 0 0; font-size: .8125rem; color: var(--ink-2); line-height: 1.35; }
+.brand p b { color: var(--ink); }
+.brand .info {
+  flex: none; width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--line);
+  background: transparent; cursor: pointer; font-weight: 900; color: var(--ink-2);
+}
+
+/* dock */
+.dock {
+  position: fixed; z-index: 5;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 6px; padding: 6px;
+  border-radius: 999px; background: var(--glass); backdrop-filter: blur(12px) saturate(1.2);
+  border: 1.5px solid var(--edge); box-shadow: var(--shadow);
+  max-width: calc(100vw - 28px);
+}
+.dock button {
+  border: 0; background: transparent; cursor: pointer; white-space: nowrap;
+  padding: 9px 14px; border-radius: 999px; font-weight: 700; font-size: .875rem; color: var(--ink);
+}
+.dock button:hover { background: var(--accent-soft); }
+.dock .primary { background: var(--accent); color: var(--on-accent); padding-inline: 18px; }
+.dock .primary:hover { background: #7a5bcb; }
+.dock .seg { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--accent-soft); }
+.dock .seg button { padding: 6px 12px; }
+.dock .seg button[aria-pressed="true"] { background: var(--glass-strong); box-shadow: 0 2px 8px rgba(60, 40, 110, .15); }
+.dock .toggle[aria-pressed="true"] { color: var(--accent-deep); background: var(--accent-soft); }
+.dock .sep { width: 1px; height: 22px; background: var(--line); }
+.dock .icon { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; flex: none; }
+svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.dock .icon svg { width: 20px; height: 20px; display: block; }
+.dock .toggle[aria-pressed="false"] { color: var(--ink-2); }
+@media (max-width: 760px) {
+  .dock { left: max(10px, env(safe-area-inset-left, 0px)); right: max(10px, env(safe-area-inset-right, 0px)); transform: none; max-width: none; flex-wrap: wrap; justify-content: center; border-radius: 22px; gap: 4px; }
+  .dock .sep { display: none; }
+  .dock button { padding: 8px 11px; font-size: .8125rem; }
+  .dock .seg button { padding: 6px 10px; }
+  .dock .icon { width: 36px; height: 36px; }
+  .dock .wide { display: none; }
+  .brand p { display: none; }
+}
+
+/* the four modes: boot, menu (title screen), play (forecast game), tour and roam */
+.brand, .dock { transition: opacity .4s ease, visibility 0s; }
+body[data-mode="boot"] .brand, body[data-mode="boot"] .dock,
+body[data-mode="menu"] .brand, body[data-mode="menu"] .dock { opacity: 0; visibility: hidden; transition: opacity .4s ease, visibility 0s linear .4s; }
+body[data-mode="play"] #tourBtn, body[data-mode="play"] .brand p { display: none; }
+
+/* letterbox bars: on the title screen and while a mission is introduced */
+.cine { position: fixed; inset: 0; z-index: 7; pointer-events: none; overflow: hidden; }
+.cine i { position: absolute; left: 0; right: 0; height: 7.5vh; background: #0c0822; transition: transform .7s cubic-bezier(.2, .8, .2, 1); }
+.cine i:nth-child(1) { top: 0; transform: translateY(-101%); }
+.cine i:nth-child(2) { bottom: 0; transform: translateY(101%); }
+body.cine .cine i, body[data-mode="menu"] .cine i { transform: none; }
+.cine-title { position: absolute; left: clamp(18px, 6vw, 92px); right: 18px; bottom: 15vh; color: #fff; opacity: 0; text-shadow: 0 4px 30px rgba(12, 6, 40, .75); }
+.cine-title span { display: block; margin-bottom: 10px; font-size: .8125rem; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: #ffd66b; }
+.cine-title b { display: block; font-family: var(--f-sign); font-weight: 900; font-size: clamp(2.6rem, 7vw, 5rem); line-height: 1; text-transform: uppercase; }
+body.cine .cine-title { animation: cine-title 1.9s ease both; }
+@keyframes cine-title { 0% { opacity: 0; transform: translateX(-28px); } 18% { opacity: 1; transform: none; } 80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(14px); } }
+
+/* title screen */
+.menu {
+  position: fixed; inset: 0; z-index: 8; display: grid; align-items: center;
+  padding: max(9vh, 28px) clamp(18px, 6vw, 92px);
+  pointer-events: none; opacity: 0; transition: opacity .5s ease; color: #fff;
+  background: linear-gradient(90deg, rgba(18, 12, 44, .7) 0%, rgba(18, 12, 44, .42) 30%, rgba(18, 12, 44, 0) 60%);
+}
+.menu.in { opacity: 1; }
+.menu.in button, .menu.in .trophies i { pointer-events: auto; }
+.menu-inner { width: min(480px, 100%); display: flex; flex-direction: column; }
+.kicker { margin: 0; font-size: .75rem; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: #ffd66b; }
+.logo {
+  margin: 8px 0 12px; font-family: var(--f-sign); font-weight: 900; font-size: clamp(3.6rem, min(12vw, 15.5vh), 9rem);
+  line-height: .82; text-transform: uppercase; filter: drop-shadow(0 8px 30px rgba(12, 6, 40, .55));
+}
+.logo span { display: block; }
+.logo span + span { color: #ffd66b; background: linear-gradient(180deg, #ffeab0, #f2b632); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.tagline { margin: 0 0 max(12px, 2.4vh); max-width: 40ch; font-size: 1.0625rem; line-height: 1.5; text-shadow: 0 2px 14px rgba(12, 6, 40, .7); }
+.tagline b { color: #ffd66b; }
+.menu-list { display: grid; gap: 10px; }
+.mbtn {
+  display: grid; grid-template-columns: 46px 1fr; align-items: center; gap: 12px; width: 100%;
+  padding: 12px 16px; border-radius: 16px; text-align: left; cursor: pointer; color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, .3); background: rgba(24, 16, 54, .5); backdrop-filter: blur(10px) saturate(1.2);
+  transition: transform .2s cubic-bezier(.2, .8, .2, 1), background .2s, border-color .2s;
+}
+.mbtn:hover, .mbtn:focus-visible { transform: translateX(10px); background: rgba(138, 106, 214, .66); border-color: #fff; }
+.mbtn.main { background: linear-gradient(90deg, rgba(138, 106, 214, .96), rgba(106, 79, 194, .92)); border-color: rgba(255, 255, 255, .7); box-shadow: 0 10px 34px rgba(60, 30, 140, .45); }
+.mbtn.main:hover, .mbtn.main:focus-visible { background: linear-gradient(90deg, #9a7be6, #7a5bcb); }
+.mbtn .k { font-family: var(--f-sign); font-weight: 900; font-size: 1.9rem; line-height: 1; opacity: .75; }
+.mbtn b { display: block; font-size: 1.0625rem; font-weight: 900; }
+.mbtn small { display: block; margin-top: 1px; font-size: .8125rem; opacity: .88; line-height: 1.35; }
+.best { margin: 14px 0 0; font-size: .875rem; font-weight: 700; color: #ffd66b; }
+.trophies { display: flex; align-items: center; gap: 7px; margin-top: 12px; font-size: .75rem; }
+.trophies span { margin-right: 6px; opacity: .9; }
+.trophies i { width: 11px; height: 11px; border-radius: 2px; rotate: 45deg; border: 1.5px solid rgba(255, 255, 255, .6); }
+.trophies i.got { background: #ffd66b; border-color: #ffd66b; box-shadow: 0 0 10px rgba(255, 214, 107, .8); }
+.menu-foot { display: flex; align-items: center; gap: 14px; margin-top: 16px; font-size: .75rem; }
+.menu-foot > span { opacity: .8; }
+.menu-foot button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; border: 1.5px solid rgba(255, 255, 255, .4); background: rgba(24, 16, 54, .45); color: #fff; cursor: pointer; font-weight: 700; font-size: .75rem; }
+.menu-foot button svg { width: 15px; height: 15px; }
+.menu-foot button[aria-pressed="true"] { background: #fff; color: #2b2238; border-color: #fff; }
+/* the written report and the 2D story, one tap away from the title screen */
+.menu-links { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .22); font-size: .8125rem; font-weight: 700; }
+.menu-links a { color: #fff; text-decoration: underline; text-decoration-color: rgba(255, 214, 107, .9); text-underline-offset: 3px; text-shadow: 0 1px 8px rgba(12, 6, 40, .8); }
+.menu-links a:hover, .menu-links a:focus-visible { color: #ffd66b; }
+.menu.in .menu-links a { pointer-events: auto; }
+/* shorter laptop screens: tighten the menu so the links stay above the bottom bar */
+@media (min-width: 761px) and (max-height: 820px) {
+  .mbtn { padding-block: 9px; }
+  .menu-list { gap: 8px; }
+  .menu-foot { margin-top: 10px; }
+  .menu-links { margin-top: 10px; padding-top: 8px; }
+}
+@media (min-width: 761px) and (max-height: 700px) {
+  .mbtn:not(.main) small, .trophies { display: none; }
+  .tagline { font-size: .9375rem; }
+}
+@media (max-width: 760px) {
+  .menu {
+    align-items: stretch; padding: calc(8.5vh + 12px + env(safe-area-inset-top, 0px)) 18px calc(8.5vh + 12px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(180deg, rgba(18, 12, 44, .74) 0%, rgba(18, 12, 44, .3) 30%, rgba(18, 12, 44, 0) 44%, rgba(18, 12, 44, .3) 58%, rgba(18, 12, 44, .82) 100%);
+  }
+  .menu-inner { width: 100%; height: 100%; }
+  .logo { font-size: clamp(3.4rem, 20vw, 5.4rem); margin: 6px 0 8px; }
+  .tagline { margin: 0; font-size: .9375rem; }
+  .menu-list { margin-top: auto; gap: 8px; }
+  .mbtn { padding: 9px 12px; grid-template-columns: 38px 1fr; }
+  .mbtn .k { font-size: 1.6rem; }
+  .mbtn small { font-size: .75rem; }
+  .mbtn:not(.main) small { display: none; }
+  .best { margin-top: 10px; }
+  .menu-foot { margin-top: 10px; }
+  .menu-links { margin-top: 10px; padding-top: 8px; gap: 2px 14px; font-size: .75rem; }
+}
+
+/* forecast game: score strip, toasts */
+.hud {
+  position: fixed; z-index: 5; top: calc(14px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 16px; padding: 8px 18px; border-radius: 999px; white-space: nowrap;
+  background: rgba(22, 16, 48, .8); color: #fff; backdrop-filter: blur(10px); border: 1.5px solid rgba(255, 255, 255, .26); box-shadow: var(--shadow);
+}
+.hud-m { font-family: var(--f-sign); font-weight: 700; font-size: 1.2rem; letter-spacing: .07em; text-transform: uppercase; }
+.hud-pips { display: flex; gap: 7px; }
+.hud-pips i { width: 10px; height: 10px; rotate: 45deg; border-radius: 2px; background: rgba(255, 255, 255, .22); }
+.hud-pips i.cur { background: transparent; box-shadow: inset 0 0 0 2px #fff; animation: pip 1.2s ease-in-out infinite; }
+.hud-pips i.p3 { background: #ffd66b; box-shadow: 0 0 10px rgba(255, 214, 107, .9); }
+.hud-pips i.p2 { background: #f2b632; }
+.hud-pips i.p1 { background: #b98a3a; }
+.hud-pips i.p0 { background: #8d7fa8; }
+@keyframes pip { 50% { scale: 1.3; } }
+.hud-score { display: flex; align-items: baseline; gap: 7px; }
+.hud-score small { font-size: .625rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
+.hud-score b { display: inline-block; min-width: 2.2ch; text-align: right; font-family: var(--f-sign); font-weight: 900; font-size: 1.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.hud-score b.bump { animation: bump .6s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes bump { 30% { scale: 1.4; color: #ffd66b; } }
+@media (max-width: 760px) {
+  .hud { left: max(10px, env(safe-area-inset-left, 0px)); right: auto; transform: none; gap: 12px; padding: 8px 14px; top: calc(14px + env(safe-area-inset-top, 0px)); }
+  body[data-mode="play"] .brand { display: none; }
+  .hud-m { font-size: 1rem; }
+  .hud-pips { display: none; }
+  .hud-score b { font-size: 1.3rem; }
+}
+.toasts { position: fixed; z-index: 12; left: 50%; top: calc(74px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: grid; gap: 8px; justify-items: center; pointer-events: none; width: max-content; max-width: calc(100vw - 28px); }
+.toast {
+  display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 16px;
+  background: rgba(22, 16, 48, .9); color: #fff; border: 1.5px solid rgba(255, 214, 107, .7); box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+  opacity: 0; transform: translateY(-12px) scale(.96); transition: opacity .35s ease, transform .35s cubic-bezier(.2, 1.4, .4, 1);
+}
+.toast.in { opacity: 1; transform: none; }
+.toast .sprite { width: 28px; height: 28px; flex: none; }
+.toast b { display: block; font-size: .9375rem; }
+.toast small { display: block; font-size: .75rem; opacity: .82; }
+
+/* photo mode */
+.photo-bar {
+  position: fixed; z-index: 12; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  display: flex; gap: 4px; padding: 5px; border-radius: 999px; background: rgba(22, 16, 48, .55); backdrop-filter: blur(8px);
+  opacity: .6; transition: opacity .2s;
+}
+.photo-bar:hover, .photo-bar:focus-within { opacity: 1; }
+.photo-bar button { border: 0; border-radius: 999px; padding: 8px 14px; background: transparent; color: #fff; cursor: pointer; font-weight: 700; font-size: .8125rem; white-space: nowrap; }
+.photo-bar button:hover { background: rgba(255, 255, 255, .18); }
+body.photo .brand, body.photo .dock, body.photo .tour, body.photo .overlay, body.photo .hud, body.photo .credits, body.photo .toasts, body.photo .cine { display: none !important; }
+
+/* stop pins and tower labels (projected from 3D every frame) */
+.overlay { position: fixed; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+.pin {
+  position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer;
+  width: 44px; height: 44px; margin: -22px 0 0 -22px; padding: 0;
+  border-radius: 50%; border: 2px solid #fff; background: var(--glass-strong);
+  box-shadow: 0 6px 18px rgba(40, 20, 80, .28), 0 0 0 4px rgba(138, 106, 214, .35);
+  display: grid; place-items: center;
+  transition: opacity .3s ease, box-shadow .2s ease;
+}
+.pin .sprite { width: 26px; height: 26px; }
+.pin .num {
+  position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 99px;
+  background: var(--accent); color: #fff; font-size: .6875rem; font-weight: 900; display: grid; place-items: center; border: 2px solid #fff;
+}
+.pin .tag {
+  position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
+  white-space: nowrap; padding: 4px 9px; border-radius: 99px; font-size: .75rem; font-weight: 700;
+  background: var(--glass-strong); color: var(--ink); box-shadow: 0 4px 12px rgba(40, 20, 80, .18);
+  opacity: 0; transition: opacity .2s ease; pointer-events: none;
+}
+.pin:hover .tag, .pin:focus-visible .tag { opacity: 1; }
+.pin.active { box-shadow: 0 6px 18px rgba(40, 20, 80, .3), 0 0 0 5px var(--accent); }
+.pin-bob { animation: bob 2.6s ease-in-out infinite; }
+@keyframes bob { 50% { translate: 0 -5px; } }
+
+.tl {
+  position: absolute; left: 0; top: 0; opacity: 0; transition: opacity .25s ease;
+  padding: 5px 10px 5px; border-radius: 12px; text-align: center; white-space: nowrap;
+  background: var(--glass-strong); border: 1.5px solid var(--edge);
+  box-shadow: 0 6px 16px rgba(40, 20, 80, .22);
+  font-size: .6875rem; font-weight: 700; color: var(--ink-2); line-height: 1.25;
+}
+.tl b { display: block; font-family: var(--f-sign); font-weight: 900; font-size: 1.45rem; line-height: 1; letter-spacing: .01em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tl small { display: block; font-size: .625rem; font-weight: 500; }
+.tl::after {
+  content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: 14px; margin-left: -1px;
+  background: linear-gradient(var(--glass-strong), transparent);
+}
+.tl.on { opacity: 1; }
+.tl.compact small:last-child { display: none; }
+.tl.compact b { font-size: 1.2rem; }
+@media (max-width: 760px) {
+  /* little room on a phone: a number with its colour, the names are in the card */
+  .tl.compact { padding: 3px 8px; border-left: 5px solid var(--c, var(--accent)); }
+  .tl.compact small { display: none; }
+}
+.tl.hot { opacity: 1; border-color: var(--c, var(--accent)); box-shadow: 0 0 0 3px var(--c, var(--accent)), 0 8px 20px rgba(40, 20, 80, .28); }
+/* the visitor's guess in the forecast game */
+.tl.pinned { opacity: 1; border: 1.5px dashed var(--c, #fff); background: rgba(22, 16, 48, .86); color: rgba(255, 255, 255, .85); }
+.tl.pinned b { color: #fff; }
+.tl.pinned::after { display: none; }
+.tl.pinned.side::before { content: ""; position: absolute; right: 100%; top: 50%; width: 14px; border-top: 1.5px dashed var(--c, #fff); }
+
+/* tour card */
+.tour {
+  position: fixed; z-index: 6;
+  right: max(14px, env(safe-area-inset-right, 0px));
+  top: calc(84px + env(safe-area-inset-top, 0px));
+  width: min(410px, calc(100vw - 28px));
+  max-height: calc(100vh - 176px); overflow: auto;
+  padding: 18px 18px 0; border-radius: 24px;
+  background: var(--glass-strong); backdrop-filter: blur(14px) saturate(1.2);
+  border: 1.5px solid var(--edge); box-shadow: var(--shadow);
+  animation: card-in .45s cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes card-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+.tour .top { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.tour .top .sprite { width: 44px; height: 44px; flex: none; }
+.tour .eyebrow { margin: 0; font-size: .75rem; font-weight: 700; letter-spacing: .04em; color: var(--accent-deep); text-transform: uppercase; }
+.tour h2 { margin: 2px 0 0; font-size: 1.3rem; font-weight: 900; line-height: 1.2; text-wrap: balance; }
+.tour .close { margin-left: auto; align-self: flex-start; flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--line); background: transparent; cursor: pointer; font-size: 1.1rem; line-height: 1; color: var(--ink-2); }
+.tour p { margin: 0 0 10px; font-size: .9375rem; line-height: 1.6; }
+.tour .note { font-size: .8125rem; color: var(--ink-2); }
+.tour p b { color: var(--accent-deep); }
+.tour ul.points { margin: 0 0 10px; padding-left: 1.1em; display: grid; gap: 6px; font-size: .9375rem; line-height: 1.55; }
+.tour a { color: var(--accent-deep); font-weight: 700; }
+.key { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; padding: 8px 10px; border-radius: 12px; background: var(--accent-soft); font-size: .8125rem; line-height: 1.4; }
+.key .ruler { flex: none; width: 14px; height: 34px; border-radius: 3px; background: repeating-linear-gradient(to top, var(--accent) 0 2px, transparent 2px 6.8px); border: 1.5px solid var(--accent); }
+
+/* chart rows: each row is a button linked to one structure in the scene */
+.rows { display: grid; gap: 4px; margin: 6px 0 8px; }
+.rows .series { margin: 6px 0 0; font-size: .6875rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); }
+.row {
+  display: grid; grid-template-columns: minmax(88px, 35%) 1fr 58px; align-items: center; gap: 10px;
+  width: 100%; padding: 6px 8px; border-radius: 12px; border: 1.5px solid transparent; background: transparent;
+  cursor: pointer; text-align: left; font-size: .875rem; font-weight: 700;
+}
+.row:hover, .row.hot { background: var(--accent-soft); }
+.row.sel { background: var(--accent-soft); border-color: var(--c, var(--accent)); }
+.row .lab { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.row .lab i { flex: none; width: 10px; height: 10px; border-radius: 3px; background: var(--c, var(--accent)); }
+.row .bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.row .bar u { display: block; height: 100%; width: 0; border-radius: 6px; background: var(--c, var(--accent)); text-decoration: none; }
+.row .val { font-family: var(--f-sign); font-weight: 900; font-size: 1.2rem; line-height: 1; text-align: right; font-variant-numeric: tabular-nums; }
+.row small { grid-column: 1 / -1; margin-top: -2px; font-size: .6875rem; font-weight: 500; color: var(--ink-2); }
+.hint { margin: 0 0 8px; font-size: .75rem; color: var(--ink-2); }
+/* forecast results */
+.res { width: 100%; margin: 4px 0 10px; border-collapse: collapse; font-size: .875rem; font-variant-numeric: tabular-nums; }
+.res th, .res td { padding: 6px 4px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.res thead th { font-size: .6875rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.res th:first-child { text-align: left; }
+.res tbody th { font-weight: 700; }
+.res .stars { color: #e0a21c; letter-spacing: .06em; }
+.res .pts { font-family: var(--f-sign); font-weight: 900; font-size: 1.2rem; line-height: 1; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.row .stars { color: #e0a21c; letter-spacing: .08em; font-size: 1rem; white-space: nowrap; }
+/* what the architecture of this district stands for */
+.tour .look { display: flex; gap: 9px; align-items: flex-start; margin: 0 0 10px; padding: 8px 10px; border-radius: 12px; background: var(--accent-soft); font-size: .8125rem; line-height: 1.45; }
+.tour .look i { flex: none; width: 9px; height: 9px; margin-top: 5px; rotate: 45deg; border-radius: 2px; background: var(--accent); }
+
+/* forecast game cards */
+.guess { margin: 2px 0 6px; }
+.dial { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.guess .big { min-width: 4.6ch; text-align: center; font-family: var(--f-sign); font-weight: 900; font-size: 3.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.nudge { width: 36px; height: 36px; flex: none; border-radius: 50%; border: 1.5px solid var(--line); background: transparent; cursor: pointer; font-size: 1.25rem; font-weight: 900; line-height: 1; }
+.nudge:hover { background: var(--accent-soft); }
+.guess input[type="range"] { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 32px; margin: 4px 0 0; padding: 0; background: transparent; cursor: pointer; }
+.guess input::-webkit-slider-runnable-track { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--accent) var(--v, 30%), var(--line) var(--v, 30%)); }
+.guess input::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -8px; border-radius: 50%; background: #fff; border: 4px solid var(--accent); box-shadow: 0 3px 10px rgba(40, 20, 80, .35); }
+.guess input::-moz-range-track { height: 12px; border-radius: 6px; background: var(--line); }
+.guess input::-moz-range-progress { height: 12px; border-radius: 6px; background: var(--accent); }
+.guess input::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 4px solid var(--accent); box-shadow: 0 3px 10px rgba(40, 20, 80, .35); }
+.guess .scale { display: flex; justify-content: space-between; padding: 0 6px; font-size: .6875rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.verdict { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; padding: 10px 12px; border-radius: 14px; background: var(--accent-soft); border: 1.5px solid var(--accent); animation: pop .55s cubic-bezier(.2, 1.5, .4, 1) both; }
+.verdict.wait { visibility: hidden; animation: none; }
+.verdict .stars { font-size: 1.5rem; letter-spacing: .06em; color: #e0a21c; white-space: nowrap; }
+.verdict b { display: block; font-size: .9375rem; }
+.verdict small { display: block; font-size: .8125rem; color: var(--ink-2); }
+.verdict.s3 { border-color: #e0a21c; background: rgba(255, 214, 107, .28); }
+.verdict.s0 { border-color: var(--line); }
+@keyframes pop { from { opacity: 0; transform: scale(.9); } }
+.scorecard { display: flex; align-items: center; gap: 14px; margin: 2px 0 10px; padding: 10px 14px; border-radius: 16px; background: var(--accent-soft); border: 1.5px solid var(--c, var(--accent)); }
+.scorecard .big { font-family: var(--f-sign); font-weight: 900; font-size: 3.6rem; line-height: 1; color: var(--c, var(--accent)); font-variant-numeric: tabular-nums; }
+.scorecard b { display: block; font-size: 1.125rem; }
+.scorecard small { display: block; font-size: .8125rem; color: var(--ink-2); }
+
+/* build-your-own controls */
+.opts { display: grid; gap: 8px; margin: 4px 0 10px; }
+.opts fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; }
+.opts legend { float: left; padding: 0; font-size: .75rem; font-weight: 700; color: var(--ink-2); }
+.opts .choices { display: flex; flex-wrap: wrap; gap: 4px; }
+.opts input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.opts label { padding: 6px 11px; border-radius: 999px; border: 1.5px solid var(--line); font-size: .8125rem; font-weight: 700; cursor: pointer; user-select: none; }
+.opts input:checked + label { background: var(--accent); border-color: var(--accent); color: #fff; }
+.result { display: flex; align-items: baseline; gap: 10px; margin: 0 0 6px; }
+.result .big { font-family: var(--f-sign); font-weight: 900; font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.result .txt { font-size: .8125rem; line-height: 1.4; color: var(--ink-2); }
+.warn { margin: 0 0 8px; padding: 6px 10px; border-radius: 10px; background: #fff3d6; color: #5b4200; font-size: .75rem; }
+.picks { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.picks button, .nav button { border: 1.5px solid var(--line); background: transparent; border-radius: 999px; padding: 7px 14px; cursor: pointer; font-weight: 700; font-size: .8125rem; }
+.picks button:hover { background: var(--accent-soft); }
+
+/* the buttons that move on stay in view while a long card scrolls */
+.nav { position: sticky; bottom: 0; z-index: 1; display: flex; align-items: center; gap: 8px; margin: 4px -18px 0; padding: 10px 18px 14px; border-top: 1px solid var(--line); background: var(--card); border-radius: 0 0 22px 22px; }
+.nav button:disabled { opacity: .4; cursor: default; }
+.nav .next { margin-left: auto; background: var(--accent); border-color: var(--accent); color: #fff; }
+.dots { display: flex; gap: 5px; margin-left: 6px; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.dots i.on { background: var(--accent); }
+@media (max-width: 760px) {
+  .tour {
+    top: auto; right: max(10px, env(safe-area-inset-right, 0px)); left: max(10px, env(safe-area-inset-left, 0px));
+    bottom: calc(118px + env(safe-area-inset-bottom, 0px)); width: auto; max-height: 50vh; padding: 14px 14px 0;
+  }
+  .tour h2 { font-size: 1.1rem; }
+  .tour p { font-size: .875rem; margin-bottom: 8px; }
+  .tour .top .sprite { width: 36px; height: 36px; }
+  .row { padding: 5px 6px; }
+  .opts fieldset { grid-template-columns: 76px 1fr; }
+  .guess ~ .note { display: none; }
+  .guess .big { font-size: 3rem; }
+  .nav { margin-inline: -14px; padding-inline: 14px; }
+}
+
+/* credits popover */
+.credits {
+  position: fixed; z-index: 7;
+  top: calc(84px + env(safe-area-inset-top, 0px)); left: max(14px, env(safe-area-inset-left, 0px));
+  width: min(400px, calc(100vw - 28px)); padding: 14px 16px; border-radius: 18px;
+  background: var(--glass-strong); backdrop-filter: blur(14px); border: 1.5px solid var(--edge); box-shadow: var(--shadow);
+  font-size: .8125rem; line-height: 1.55; color: var(--ink-2);
+}
+.credits h3 { margin: 0 0 6px; font-size: .9375rem; color: var(--ink); }
+.credits p { margin: 0 0 6px; }
+.credits a { color: var(--accent-deep); font-weight: 700; }
+.credits .files { padding: 7px 10px; border-radius: 10px; background: var(--accent-soft); color: var(--ink); }
+@media (prefers-reduced-motion: reduce) {
+  .pin-bob, .tour, .verdict, .hud-pips i.cur, .hud-score b.bump { animation: none; }
+  .loader, .menu, .cine i, .mbtn, .toast { transition: none; }
+}
+</style>
+</head>
+<body>
+<!--BODY-->
+<canvas id="scene" aria-label="3D megastructure city with jacaranda trees. Drag to rotate, scroll or pinch to zoom." tabindex="0"></canvas>
+
+<div class="loader" id="loader" role="status">
+  <div class="loader-inner">
+    <h1>Steam Town</h1>
+    <p>A megastructure city where one floor is one percent of 81,117 Steam games.</p>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="msg" id="msg">Loading models…</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<!-- letterbox bars and the mission title card -->
+<div class="cine" aria-hidden="true">
+  <i></i><i></i>
+  <div class="cine-title"><span id="cineK"></span><b id="cineT"></b></div>
+</div>
+
+<section class="menu" id="menu" hidden aria-label="Main menu">
+  <div class="menu-inner">
+    <p class="kicker">NMC5344 · a city made of data</p>
+    <h1 class="logo"><span>Steam</span><span>Town</span></h1>
+    <p class="tagline">81,117 Steam games, built as a megastructure city. <b>One floor is one percent.</b></p>
+    <div class="menu-list">
+      <button type="button" class="mbtn main" id="mPlay"><span class="k">01</span><span><b>Play the forecast</b><small>Guess how tall each tower gets. Six missions, 600 points.</small></span></button>
+      <button type="button" class="mbtn" id="mTour"><span class="k">02</span><span><b>Guided tour</b><small>Nine stops through what we found.</small></span></button>
+      <button type="button" class="mbtn" id="mRoam"><span class="k">03</span><span><b>Free roam</b><small>Fly around, tap a tower, build your own.</small></span></button>
+    </div>
+    <p class="best" id="best" hidden></p>
+    <div class="trophies" id="trophies"></div>
+    <div class="menu-foot">
+      <button type="button" data-music aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg><span class="lab">Music off</span></button>
+      <span id="menuHint">Drag to look around</span>
+    </div>
+    <nav class="menu-links" aria-label="Project files">
+      <a href="../report/Group_Project_1111_1013.pdf" target="_blank" rel="noopener">Report (PDF)</a>
+      <a href="../report/Group_Project_1111_1013.html" target="_blank" rel="noopener">Report with R code</a>
+      <a href="../steam-pixel-story/" target="_blank" rel="noopener">Pixel story</a>
+      <a href="../" target="_blank" rel="noopener">Project home</a>
+    </nav>
+  </div>
+</section>
+
+<header class="brand">
+  <img class="sprite" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mNgGH5AREjqPz5MUPOXjy/+91/+D8bWfR9QsLz/CtyGoGvGZgBOQwg5m6B3QBxCNsNsh2GsriDWALzhQMgAomKC5BjAZgjZmtENIUszevQO7rwDACdN2ACDy1CCAAAAAElFTkSuQmCC" alt="" width="40" height="40">
+  <div>
+    <h1>Steam Town</h1>
+    <p><b>One floor = 1%.</b> Drag to look around, tap a tower or a pin.</p>
+  </div>
+  <button type="button" class="info" id="info" aria-expanded="false" aria-controls="credits" aria-label="About and credits">i</button>
+</header>
+
+<div class="hud" id="hud" hidden>
+  <span class="hud-m" id="hudMission">Mission 1 / 6</span>
+  <span class="hud-pips" id="hudPips" aria-hidden="true"></span>
+  <span class="hud-score"><small>Score</small><b id="hudScore">0</b></span>
+</div>
+
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+<section class="credits" id="credits" hidden aria-label="About and credits">
+  <h3>About this town</h3>
+  <p>NMC5344 group project by Jingyi, <a href="https://github.com/absentminderic" target="_blank" rel="noopener">@absentminderic</a>, <a href="https://kenetizen.github.io/" target="_blank" rel="noopener">Kenetizen.github.io</a>, <a href="https://github.com/letitgotia" target="_blank" rel="noopener">@letitgotia</a> and Vivian. Data: Steam Games Dataset 2025 (Kaggle), store data up to 10 March 2025.</p>
+  <p class="files"><b>Project files:</b> <a href="../report/Group_Project_1111_1013.pdf" target="_blank" rel="noopener">report (PDF)</a> · <a href="../report/Group_Project_1111_1013.html" target="_blank" rel="noopener">report with R code (HTML)</a> · <a href="../steam-pixel-story/" target="_blank" rel="noopener">pixel story</a> · <a href="../" target="_blank" rel="noopener">project home</a></p>
+  <p>Every tower is a bar chart: its height is the share of games in that group with 100,000 or more estimated owners, at one floor per percent. The foundation under the town is all 81,117 games, split into five owner tiers.</p>
+  <p>In the forecast game each mission is worth 100 points, minus 5 for every floor your guess is off.</p>
+  <p>3D town models: KayKit City Builder Bits and Medieval Hexagon Pack by Kay Lousberg, CC0. Megastructures, jacarandas, clouds and lighting are generated in code. Pixel icons drawn for this project.</p>
+  <p>Music: “Not Quite a Masterpiece”, made with Suno.</p>
+  <p>Built with three.js.</p>
+</section>
+
+<aside class="tour" id="tour" hidden></aside>
+
+<nav class="dock" aria-label="Scene controls">
+  <button type="button" class="primary" id="menuBtn">Menu</button>
+  <button type="button" id="tourBtn">Tour</button>
+  <span class="sep" aria-hidden="true"></span>
+  <span class="seg" role="group" aria-label="Time of day">
+    <button type="button" data-time="day" aria-pressed="false">Day</button>
+    <button type="button" data-time="golden" aria-pressed="true">Golden<span class="wide"> hour</span></button>
+    <button type="button" data-time="night" aria-pressed="false">Night</button>
+  </span>
+  <span class="sep" aria-hidden="true"></span>
+  <button type="button" class="toggle icon" id="mini" aria-pressed="true" aria-label="Miniature blur" title="Miniature blur"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></button>
+  <button type="button" class="toggle icon" id="petals" aria-pressed="true" aria-label="Falling petals" title="Falling petals"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1.6"/><path d="M12 10c-2.2-2.4-2.2-5 0-7 2.2 2 2.2 4.6 0 7zM14 12c2.4-2.2 5-2.2 7 0-2 2.2-4.6 2.2-7 0zM12 14c2.2 2.4 2.2 5 0 7-2.2-2-2.2-4.6 0-7zM10 12c-2.4 2.2-5 2.2-7 0 2-2.2 4.6-2.2 7 0z"/></svg></button>
+  <button type="button" class="toggle icon" id="spin" aria-pressed="false" aria-label="Spin the city" title="Spin the city"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button>
+  <button type="button" class="toggle icon" data-music aria-pressed="false" aria-label="Music" title="Music"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></button>
+  <button type="button" class="icon" id="photo" aria-label="Photo mode: hide the controls" title="Photo mode"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg></button>
+  <button type="button" class="icon" id="reset" aria-label="Reset the view" title="Reset the view"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/></svg></button>
+</nav>
+
+<div class="photo-bar" id="photoBar" hidden>
+  <button type="button" id="photoSave">Save picture</button>
+  <button type="button" id="photoExit">Exit photo mode</button>
+</div>
+<script type="importmap">
+{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OutlineEffect } from 'three/addons/effects/OutlineEffect.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { Pass } from 'three/addons/postprocessing/Pass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { HorizontalTiltShiftShader } from 'three/addons/shaders/HorizontalTiltShiftShader.js';
+import { VerticalTiltShiftShader } from 'three/addons/shaders/VerticalTiltShiftShader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+// ===================================================================== 01 core
+const SPRITES = {
+  floppy: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAY0lEQVR42mNgoAYQEZL6Tw5GMaD/8v//1n0fwBKzFizDwCBxkDwIy/uvwDQAJgkzICapYIANoMgLuDBRBhCDcRrw5eMLojBeA0CBhw8TNIBmLiDaALJdABIkBWMYQFFmogQAAO9ixSbI5RaIAAAAAElFTkSuQmCC', gem: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mNgGH5AREjqPz5MUPOXjy/+91/+D8bWfR9QsLz/CtyGoGvGZgBOQwg5m6B3QBxCNsNsh2GsriDWALzhQMgAomKC5BjAZgjZmtENIUszevQO7rwDACdN2ACDy1CCAAAAAElFTkSuQmCC', boot: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAVUlEQVR42mNgGHRAREjqPzZMkgH/H3T9/7TNCI5JNoBiF5xcFA3GVV5KYDxMDCA6PLAZgI7xGkKMAXgNQTYAn0FYDcCVBohOGyDBmKQCojBtXEAOAADRTMZPHahLXwAAAABJRU5ErkJggg==', scroll: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAASUlEQVR42mNgoBYQEZL6TwrG0FzlpfT/5KJoojBILVZDyHYBsiEf76zDi3FqRjYA5ER0TJIBNHEBzBUD4wKSDRiYMBgmSZkcAACsNlELO7tcagAAAABJRU5ErkJggg==',
+  chest: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAYklEQVR42mNgGFRAREjqPzEYp+YqL6X/JxdF48UgNRiGEKsZpyFUMQAb/rTNCIwJhgU2F4DE/j/o+r+1UgbMJtkLIDGQZrINgBmCrhmnATD/EoupHwsgQVIwUdFIVpKmOwAAAlhO2bC+1PMAAAAASUVORK5CYII=', bolt: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAR0lEQVR42mNgoDUQEZL6j45J0vz/QRccf9pmRLwByJpBGgdeM1FhgO5ndEzQNdhCfHCFA0maSdaIrpkkjTDNZGlEjwGGIQcAl7C0uJ+AuhwAAAAASUVORK5CYII=', magnifier: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAUElEQVR42mNgoCYQEZL6jw0TrXnWgmVYMUFDYJr7L/8H4y8fX4AxjE/QEGQDkDWSZQA2PAQMoDgWCKWDKi8l4g3BZTDIEIoMGoaGUBSoyAAAKOrk1yTJunIAAAAASUVORK5CYII=', hammer: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAATUlEQVR42mNgoCYQEZL6TwzGqXnWgmX/v3x8AcYgNjqOSSoAY6yGwAzAhwkaAFNACOP1BtlhgM2wKi+l/ycXRROvadSAYWkAyYmHHAAAIoqs44Do9pMAAAAASUVORK5CYII=',
+  trophy: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAaElEQVR42mNgoCYQEZL6TwzGq/H/gy4w/rTNCAVvrZQBY6wGgTggRciGYDMAJg9TSz0DsHkDnwFYwwHZIHwGEB0byIaQpBk9XMjSTLEBRCcgXJqrvJT+n1wUjYJBYkQZQhUDSMoHAw4A1ULkpvse8sYAAAAASUVORK5CYII='
+};
+// Counts per [systems 1-3][languages 1 / 2-5 / 6-10 / 11+][DLC 0 / 1 / 2-5 / 6+][owner tier 0-4], from our R analysis.
+const CELLS = [[[[25360,4417,933,135,20],[1296,470,142,36,1],[444,153,68,12,3],[87,43,29,5,3]],[[10922,2159,527,96,16],[999,428,159,25,0],[333,176,102,29,9],[50,62,55,23,10]],[[3426,930,405,126,30],[422,267,156,61,11],[169,157,169,86,22],[30,37,62,55,27]],[[2980,609,279,113,56],[350,193,163,72,20],[143,114,157,84,44],[29,28,66,72,67]]],[[[3385,742,225,33,7],[389,164,53,7,4],[86,48,20,11,1],[10,9,10,2,1]],[[1398,353,114,19,1],[203,93,41,6,3],[67,34,27,12,1],[3,7,4,3,1]],[[694,233,82,23,9],[109,84,59,11,3],[37,35,53,13,5],[5,6,9,12,10]],[[483,185,91,40,8],[64,61,67,19,17],[24,20,41,27,9],[7,5,6,17,14]]],[[[2515,689,262,38,2],[375,175,91,19,5],[115,43,46,10,1],[11,5,13,1,1]],[[807,272,111,21,4],[175,97,47,9,5],[65,49,28,6,2],[4,6,7,1,3]],[[456,204,105,23,9],[107,101,99,31,11],[24,25,50,31,14],[4,2,11,6,11]],[[461,159,97,35,14],[88,54,73,43,7],[26,25,48,33,14],[5,3,12,19,23]]]];
+// The single-file build ships every model and texture inside the page, so it also works from a double-click.
+const EMBED = window.__STEAMTOWN_EMBED || null;
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isPhone = () => window.innerWidth < 760;
+const $ = id => document.getElementById(id);
+const canvas = $('scene');
+const D2R = Math.PI / 180;
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp01 = x => Math.min(1, Math.max(0, x));
+const easeIO = k => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+const easeOut = k => 1 - Math.pow(1 - k, 3);
+const fmt = n => n.toLocaleString('en-US');
+const pct = v => v.toFixed(1) + '%';
+function mulberry(a) {
+  return () => {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const rnd = mulberry(20261111);
+const onTime = [];   // callbacks(live): run whenever the time-of-day values change
+const onFrame = [];  // callbacks(dt, t): run every frame
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+} catch (err) {
+  $('msg').textContent = 'This browser cannot show 3D (WebGL is turned off).';
+  throw err;
+}
+const PR = () => Math.min(window.devicePixelRatio || 1, isPhone() ? 1.5 : 2);
+renderer.setPixelRatio(PR());
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xd7e8f8, 80, 460);
+const camera = new THREE.PerspectiveCamera(34, 1, 0.5, 2600);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.minDistance = 4;
+controls.maxDistance = 230;
+controls.minPolarAngle = 0.15;
+controls.maxPolarAngle = Math.PI * 0.56;
+controls.autoRotateSpeed = 0.35;
+controls.zoomSpeed = 0.9;
+controls.enabled = false;
+
+// ---------- toon outline + post-processing ----------
+const outline = new OutlineEffect(renderer, { defaultThickness: 0.0026, defaultColor: [0.16, 0.11, 0.22], defaultAlpha: 0.9 });
+class ToonPass extends Pass {
+  constructor() { super(); this.needsSwap = false; }
+  render(r, writeBuffer, readBuffer) {
+    r.setRenderTarget(this.renderToScreen ? null : readBuffer);
+    r.clear();
+    outline.render(scene, camera);
+  }
+}
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
+composer.addPass(new ToonPass());
+// A single NaN pixel would come out of the bloom blur as a large black block, so drop any before it gets there.
+if (renderer.capabilities.isWebGL2) {
+  composer.addPass(new ShaderPass({
+    uniforms: { tDiffuse: { value: null } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); bool bad = isnan(c.r) || isnan(c.g) || isnan(c.b) || isinf(c.r) || isinf(c.g) || isinf(c.b); gl_FragColor = bad ? vec4(0.0, 0.0, 0.0, 1.0) : vec4(min(c.rgb, vec3(64.0)), c.a); }'
+  }));
+}
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.25, 0.55, 0.86);
+composer.addPass(bloom);
+const tiltH = new ShaderPass(HorizontalTiltShiftShader);
+const tiltV = new ShaderPass(VerticalTiltShiftShader);
+tiltH.uniforms.r.value = tiltV.uniforms.r.value = 0.5;
+composer.addPass(tiltH);
+composer.addPass(tiltV);
+const grade = new ShaderPass({
+  uniforms: {
+    tDiffuse: { value: null }, uTime: { value: 0 }, uSat: { value: 1.08 }, uVignette: { value: 0.32 }, uGrain: { value: 0.016 },
+    uShadow: { value: new THREE.Color(0x6a4fc2) }, uLight: { value: new THREE.Color(0xffd7a8) }, uTint: { value: 0.6 }
+  },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float uTime, uSat, uVignette, uGrain, uTint; uniform vec3 uShadow, uLight; varying vec2 vUv;
+    void main() {
+      vec4 c = texture2D(tDiffuse, vUv);
+      vec3 col = c.rgb;
+      float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
+      col = mix(vec3(l), col, uSat);
+      col += uShadow * (1.0 - smoothstep(0.0, 0.35, l)) * 0.035 * uTint;
+      col += uLight * smoothstep(0.35, 1.0, l) * 0.045 * uTint;
+      vec2 d = vUv - 0.5;
+      col *= mix(1.0, smoothstep(0.9, 0.2, length(d * vec2(1.15, 1.0))), uVignette);
+      float n = fract(sin(dot(vUv * (uTime * 0.37 + 3.1), vec2(12.9898, 78.233))) * 43758.5453);
+      col += (n - 0.5) * uGrain;
+      gl_FragColor = vec4(col, c.a);
+    }`
+});
+composer.addPass(grade);
+composer.addPass(new OutputPass());
+
+// ---------- shared uniforms and toon helpers ----------
+const U = {
+  time: { value: 0 }, night: { value: 0 },
+  sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunColor: { value: new THREE.Color(1, 1, 1) },
+  glassA: { value: new THREE.Color(0x8fb0d6) }, glassB: { value: new THREE.Color(0xc4d8ee) }
+};
+const toonSteps = new THREE.DataTexture(new Uint8Array([92, 168, 255]), 3, 1, THREE.RedFormat);
+toonSteps.minFilter = toonSteps.magFilter = THREE.NearestFilter;
+toonSteps.needsUpdate = true;
+const toon = opts => new THREE.MeshToonMaterial({ gradientMap: toonSteps, ...opts });
+const hideOutline = m => { m.userData.outlineParameters = { visible: false }; return m; };
+// Gentle sway for foliage; works for plain and instanced meshes. Amplitude grows with height above the ground.
+function addWind(mat, amp, base = 0.45) {
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.uWindTime = U.time;
+    sh.vertexShader = 'uniform float uWindTime;\n' + sh.vertexShader.replace('#include <project_vertex>', `
+      vec4 wp = vec4( transformed, 1.0 );
+      #ifdef USE_INSTANCING
+        wp = instanceMatrix * wp;
+      #endif
+      wp = modelMatrix * wp;
+      float hgt = clamp( ( wp.y - ${base.toFixed(2)} ) / 2.6, 0.0, 1.0 );
+      wp.x += sin( uWindTime * 1.4 + wp.x * 0.9 + wp.z * 0.6 ) * ${amp.toFixed(3)} * hgt;
+      wp.z += cos( uWindTime * 1.1 + wp.x * 0.5 + wp.z * 0.8 ) * ${(amp * 0.8).toFixed(3)} * hgt;
+      vec4 mvPosition = viewMatrix * wp;
+      gl_Position = projectionMatrix * mvPosition;`);
+  };
+  mat.customProgramCacheKey = () => 'wind' + amp + '_' + base;
+  return mat;
+}
+function textTexture(w, h, draw) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  draw(g, w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
+}
+const SIGN_FONT = '"Big Shoulders Display", "Arial Narrow", Impact, sans-serif';
+const unitBox = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);   // base sits at y = 0
+function box(w, h, d, mat, x, y, z) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z);
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+
+// ===================================================================== 02 sky, clouds, light
+const skyUniforms = {
+  uTop: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() }, uBottom: { value: new THREE.Color() },
+  uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uSunColor: { value: new THREE.Color() }, uSunGlow: { value: 1 }
+};
+const sky = new THREE.Mesh(new THREE.SphereGeometry(1800, 48, 24), hideOutline(new THREE.ShaderMaterial({
+  uniforms: skyUniforms, side: THREE.BackSide, depthWrite: false, fog: false,
+  vertexShader: 'varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `
+    uniform vec3 uTop, uHorizon, uBottom, uSunDir, uSunColor; uniform float uSunGlow; varying vec3 vDir;
+    void main() {
+      vec3 dir = normalize(vDir);
+      float h = dir.y;
+      vec3 col = h > 0.0 ? mix(uHorizon, uTop, pow(smoothstep(0.0, 0.8, h), 0.75)) : mix(uHorizon, uBottom, smoothstep(-0.02, -0.7, h));
+      float s = max(dot(dir, normalize(uSunDir)), 0.0);
+      col += uSunColor * (smoothstep(0.99955, 0.9997, s) * 1.6 + pow(s, 420.0) * 0.9 + pow(s, 26.0) * 0.3 + pow(s, 6.0) * 0.12) * uSunGlow;
+      gl_FragColor = vec4(col, 1.0);
+    }`
+})));
+sky.frustumCulled = false;
+scene.add(sky);
+
+const starGeo = new THREE.BufferGeometry();
+{
+  const pts = [], rs = mulberry(7);
+  for (let i = 0; i < 1300; i++) {
+    const u = rs() * Math.PI * 2, v = 0.06 + rs() * 0.92, r = 1700;
+    const y = Math.sin(v * Math.PI / 2) * r, rr = Math.cos(v * Math.PI / 2) * r;
+    pts.push(Math.cos(u) * rr, y, Math.sin(u) * rr);
+  }
+  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+}
+const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 1.7, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
+stars.frustumCulled = false;
+scene.add(stars);
+
+// ---------- cel-shaded cumulus: clusters of spheres with flat-ish bases ----------
+const cloudBands = new THREE.DataTexture(new Uint8Array([172, 212, 240, 255]), 4, 1, THREE.RedFormat);
+cloudBands.minFilter = cloudBands.magFilter = THREE.NearestFilter;
+cloudBands.needsUpdate = true;
+const cloudMat = hideOutline(new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: cloudBands }));
+const seaMat = hideOutline(new THREE.MeshToonMaterial({ color: 0xf6f9ff, gradientMap: cloudBands }));
+const puffHi = new THREE.IcosahedronGeometry(1, 3), puffLo = new THREE.IcosahedronGeometry(1, 2);
+
+function cloudPuffs(rs, len, R) {
+  const out = [], n = Math.round(len / (R * 0.6)) + 3;
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const env = Math.sin(Math.PI * (0.1 + 0.8 * t));              // fat in the middle, thin at the ends
+    const r = R * (0.42 + 0.62 * env) * (0.78 + rs() * 0.4);
+    const x = (t - 0.5) * len + (rs() - 0.5) * R * 0.3;
+    out.push([x, r * 0.36, (rs() - 0.5) * R * 0.8, r, 0.6]);       // base row, squashed so the underside is flat
+    if (env > 0.5 && rs() > 0.2) {
+      const r2 = r * (0.5 + rs() * 0.3);
+      out.push([x + (rs() - 0.5) * r * 0.9, r * 0.62 + r2 * 0.35, (rs() - 0.5) * R * 0.5, r2, 0.85]);   // billow on top
+    }
+  }
+  const br = len * 0.42;
+  out.push([0, 0, 0, br, (R * 0.2) / br, (R * 0.85) / br]);         // one long, thin ellipsoid closes the base
+  return out;
+}
+const clouds = [];
+function makeCloud(seed, x, y, z, len, R, speed) {
+  const rs = mulberry(seed), list = cloudPuffs(rs, len, R);
+  const m = new THREE.InstancedMesh(isPhone() ? puffLo : puffHi, cloudMat, list.length);
+  const d = new THREE.Object3D();
+  list.forEach(([px, py, pz, r, sy, sz = 0.92], i) => {
+    d.position.set(px, py, pz); d.scale.set(r, r * sy, r * sz); d.updateMatrix();
+    m.setMatrixAt(i, d.matrix);
+  });
+  m.position.set(x, y, z);
+  m.frustumCulled = false;
+  m.userData = { speed, baseY: y, phase: rs() * 6.28 };
+  scene.add(m);
+  clouds.push(m);
+  return m;
+}
+[
+  [-46, 15, -36, 20, 4.4, 0.22], [34, 26, -56, 26, 5.4, 0.16], [-16, 35, -78, 32, 6.6, 0.12],
+  [56, 12, -12, 15, 3.4, 0.26], [-60, 24, 4, 18, 4.2, 0.2], [20, 11, -33, 9, 2.1, 0.3],
+  [-27, 6.5, -25, 8, 1.8, 0.34], [84, 36, -90, 36, 8, 0.1], [-96, 40, -70, 40, 8.6, 0.1],
+  [6, 48, -140, 50, 10.5, 0.08], [-42, 3.5, 24, 9, 2.0, 0.3], [44, 20, 26, 12, 2.8, 0.24],
+  [110, 18, -40, 22, 5, 0.14], [-120, 14, -30, 24, 5.2, 0.14]
+].forEach((c, i) => makeCloud(100 + i * 13, ...c));
+const CLOUD_WRAP = 150;
+function stepClouds(dt, t) {
+  for (const c of clouds) {
+    c.position.x += c.userData.speed * dt;
+    if (c.position.x > CLOUD_WRAP) c.position.x = -CLOUD_WRAP;
+    const edge = Math.min(1, (CLOUD_WRAP - Math.abs(c.position.x)) / 14);       // shrink away at the wrap line
+    c.scale.setScalar(Math.max(0.001, edge));
+    c.position.y = c.userData.baseY + Math.sin(t * 0.15 + c.userData.phase) * 0.35;
+  }
+}
+
+// ---------- the sea of clouds the megastructures rise out of ----------
+const sea = new THREE.Group();
+const seaFloor = new THREE.Mesh(new THREE.CircleGeometry(1500, 64), hideOutline(new THREE.MeshBasicMaterial({ color: 0xe9eefb })));
+{
+  const rs = mulberry(77), spots = [], step = 12.5;
+  for (let gx = -14; gx <= 14; gx++) for (let gz = -14; gz <= 14; gz++) {
+    const x = (gx + (gz & 1) * 0.5) * step + (rs() - 0.5) * 5, z = gz * step * 0.87 + (rs() - 0.5) * 5;
+    const dist = Math.hypot(x, z);
+    if (dist > 172) continue;
+    spots.push([x, -31 + rs() * 2.6, z, 8.5 + rs() * 7.5]);
+  }
+  const m = new THREE.InstancedMesh(puffLo, seaMat, spots.length);
+  const d = new THREE.Object3D();
+  spots.forEach(([x, y, z, r], i) => { d.position.set(x, y, z); d.scale.set(r, r * 0.42, r); d.updateMatrix(); m.setMatrixAt(i, d.matrix); });
+  m.frustumCulled = false;
+  m.receiveShadow = true;
+  sea.add(m);
+  seaFloor.rotation.x = -Math.PI / 2;
+  seaFloor.position.y = -32.5;
+  sea.add(seaFloor);
+  scene.add(sea);
+}
+const seaState = { y: 0, target: 0 };   // lowered during the foundation stop to reveal the whole column
+function stepSea(dt) {
+  seaState.y += (seaState.target - seaState.y) * Math.min(1, dt * 1.6);
+  sea.position.y = seaState.y;
+}
+
+// ---------- lights ----------
+const hemi = new THREE.HemisphereLight(0xdcedff, 0xf3dcc8, 1.5);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff0da, 2.4);
+sun.castShadow = true;
+{
+  const s = isPhone() ? 2048 : 4096;
+  sun.shadow.mapSize.set(s, s);
+  Object.assign(sun.shadow.camera, { left: -46, right: 46, top: 52, bottom: -46, near: 1, far: 320 });
+  sun.shadow.bias = -0.0005;
+  sun.shadow.normalBias = 0.06;
+}
+scene.add(sun, sun.target);
+
+// ===================================================================== 03 models and materials
+function hueSatLight(r, g, b) {
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 510;
+  if (mx === mn) return [0, 0, l];
+  const d = mx - mn, s = l > 0.5 ? d / (510 - mx - mn) : d / (mx + mn);
+  let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  h *= 60; if (h < 0) h += 360;
+  return [h, s, l];
+}
+function hsl(h, s, l) {
+  const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+  return [Math.round(255 * f(0)), Math.round(255 * f(8)), Math.round(255 * f(4))];
+}
+function canvasOf(tex) {
+  const img = tex.image, c = document.createElement('canvas');
+  c.width = img.width; c.height = img.height;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.drawImage(img, 0, 0);
+  return { c, g, data: g.getImageData(0, 0, c.width, c.height) };
+}
+function texFrom(c, like) {
+  const t = new THREE.CanvasTexture(c);
+  t.flipY = false; t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = like.wrapS; t.wrapT = like.wrapT; t.magFilter = like.magFilter; t.minFilter = like.minFilter;
+  return t;
+}
+
+// KayKit's palette texture is an 8 x 4 grid of gradient swatches. Re-tint whole swatches to move the houses from
+// primary colours to cream, butter, dusty rose and periwinkle, keeping each swatch's own light-to-dark ramp.
+// 'col,row': [hue, saturation, lightness base, lightness scale]
+const SWATCH_A = {
+  '7,2': [38, 0.50, 0.46, 0.66],    // salmon walls -> cream white
+  '3,1': [42, 0.62, 0.50, 0.52],    // yellow walls -> butter
+  '5,0': [14, 0.44, 0.38, 0.60],    // terracotta -> dusty rose
+  '2,1': [232, 0.38, 0.44, 0.54],   // slate -> periwinkle
+  '2,2': [128, 0.26, 0.50, 0.60],   // green -> sage
+  '3,2': [160, 0.26, 0.38, 0.60],   // dark green -> deep sage
+  '1,2': [190, 0.32, 0.40, 0.56],   // teal -> dusty teal
+  '7,0': [22, 0.60, 0.46, 0.50],    // orange -> apricot
+  '5,1': [34, 0.40, 0.46, 0.52],    // tan -> sand
+  '4,1': [352, 0.60, 0.22, 0.84]    // red details -> rose
+};
+const SWATCH_B = {
+  '7,2': [262, 0.34, 0.52, 0.56],   // salmon walls -> pale lilac
+  '3,1': [36, 0.46, 0.56, 0.50],    // yellow walls -> cream
+  '5,0': [28, 0.46, 0.44, 0.56],    // terracotta -> warm sand
+  '2,1': [205, 0.34, 0.46, 0.54],   // slate -> dusty blue
+  '2,2': [150, 0.28, 0.52, 0.58],   // green -> mint
+  '3,2': [176, 0.28, 0.38, 0.60],
+  '1,2': [215, 0.30, 0.42, 0.56],
+  '7,0': [8, 0.52, 0.48, 0.50],     // orange -> coral
+  '5,1': [40, 0.42, 0.50, 0.50],
+  '4,1': [352, 0.60, 0.22, 0.84]
+};
+function regrade(map, table, keep) {
+  const { c, g, data } = canvasOf(map), p = data.data, w = c.width, h = c.height, cw = w / 8, ch = h / 4;
+  for (let y = 0; y < h; y++) {
+    const row = Math.min(3, Math.floor(y / ch));
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      let [H, S, L] = hueSatLight(p[i], p[i + 1], p[i + 2]);
+      const t = table && table[Math.min(7, Math.floor(x / cw)) + ',' + row];
+      if (t) { H = t[0]; S = t[1]; L = clamp01(t[2] + L * t[3]); }
+      else if (S > 0.12) { S *= keep; L = clamp01(L * 0.95 + 0.04); }
+      const [r, gg, b] = hsl(H, S, L);
+      p[i] = r; p[i + 1] = gg; p[i + 2] = b;
+    }
+  }
+  g.putImageData(data, 0, 0);
+  return texFrom(c, map);
+}
+function makeWindowGlow(map) {
+  // window panes (swatch column 1, row 0) and shop glass (columns 0-1, row 3) glow at night
+  const w = map.image.width, h = map.image.height, c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
+  const warm = g.createLinearGradient(0, 0, 0, h / 4);
+  warm.addColorStop(0, '#ffc98a'); warm.addColorStop(1, '#f59a4a');
+  g.fillStyle = warm; g.fillRect(w / 8, 0, w / 8, h / 4);
+  const shop = g.createLinearGradient(0, h * 0.75, 0, h);
+  shop.addColorStop(0, '#ffe7b8'); shop.addColorStop(1, '#ffc27a');
+  g.fillStyle = shop; g.fillRect(0, h * 0.75, w / 4, h / 4);
+  return texFrom(c, map);
+}
+const MAT = { props: null, bldg: [], nature: null, glow: null };
+function materialFor(old, kind) {
+  if (kind === 'nature') return MAT.nature || (MAT.nature = toon({ map: old.map }));
+  if (kind === 'bldgA' || kind === 'bldgB') {
+    const i = kind === 'bldgA' ? 0 : 1;
+    if (!MAT.glow) MAT.glow = makeWindowGlow(old.map);
+    if (!MAT.bldg[i]) MAT.bldg[i] = toon({ map: regrade(old.map, i ? SWATCH_B : SWATCH_A, 0.8), emissive: 0xffffff, emissiveMap: MAT.glow, emissiveIntensity: 0 });
+    return MAT.bldg[i];
+  }
+  return MAT.props || (MAT.props = toon({ map: regrade(old.map, null, 0.88) }));
+}
+
+// ---------- loading ----------
+const gltfLoader = new GLTFLoader();
+const modelCache = new Map();
+let loadedCount = 0, totalCount = 0;
+// Each .gltf carries its geometry as base64. The artifact sandbox refuses fetch() of data: URLs, so read the JSON,
+// decode the buffer here and hand GLTFLoader an in-memory GLB instead.
+async function fetchModel(path) {
+  let json;
+  if (EMBED) {
+    json = EMBED.models[path];
+    if (!json) throw new Error(`${path} is not in this file`);
+    const dir = path.slice(0, path.lastIndexOf('/') + 1);
+    for (const im of json.images || []) if (EMBED.textures[dir + im.uri]) im.uri = EMBED.textures[dir + im.uri];
+  } else {
+    const res = await fetch(path);
+    if (!res.ok) throw new Error(`${path} (${res.status})`);
+    json = await res.json();
+  }
+  const buf = json.buffers[0];
+  const raw = atob(buf.uri.slice(buf.uri.indexOf(',') + 1));
+  const bin = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bin[i] = raw.charCodeAt(i);
+  delete buf.uri;
+  const head = new TextEncoder().encode(JSON.stringify(json));
+  const jPad = (4 - (head.length % 4)) % 4, bPad = (4 - (bin.length % 4)) % 4;
+  const size = 12 + 8 + head.length + jPad + 8 + bin.length + bPad;
+  const glb = new ArrayBuffer(size), dv = new DataView(glb), u8 = new Uint8Array(glb);
+  dv.setUint32(0, 0x46546C67, true); dv.setUint32(4, 2, true); dv.setUint32(8, size, true);
+  dv.setUint32(12, head.length + jPad, true); dv.setUint32(16, 0x4E4F534A, true);
+  u8.set(head, 20); u8.fill(0x20, 20 + head.length, 20 + head.length + jPad);
+  const o = 20 + head.length + jPad;
+  dv.setUint32(o, bin.length + bPad, true); dv.setUint32(o + 4, 0x004E4942, true);
+  u8.set(bin, o + 8);
+  const gltf = await gltfLoader.parseAsync(glb, path.slice(0, path.lastIndexOf('/') + 1));
+  loadedCount++;
+  $('bar').style.width = Math.round(100 * loadedCount / totalCount) + '%';
+  $('msg').textContent = `Loading models… ${loadedCount} / ${totalCount}`;
+  return gltf;
+}
+const loadModel = path => {
+  if (!modelCache.has(path)) { totalCount++; modelCache.set(path, fetchModel(path)); }
+  return modelCache.get(path);
+};
+const C = 'assets/city/', N = 'assets/nature/';
+// Places a clone of a model. o: { y, rot (degrees), scale, kind ('bldgA' | 'bldgB' | 'nature' | default props), parent, flat (plain colour) }
+async function place(path, x, z, o = {}) {
+  const gltf = await loadModel(path);
+  const obj = gltf.scene.clone(true);
+  obj.position.set(x, o.y || 0, z);
+  obj.rotation.y = (o.rot || 0) * D2R;
+  if (o.scale) obj.scale.setScalar(o.scale);
+  const kind = o.kind || (path.startsWith(N) ? 'nature' : 'props');
+  obj.traverse(m => {
+    if (!m.isMesh) return;
+    m.material = materialFor(m.material, kind);
+    if (o.flat) m.material = toon({ color: o.flat });
+    m.castShadow = true;
+    m.receiveShadow = true;
+  });
+  (o.parent || scene).add(obj);
+  return obj;
+}
+
+// ===================================================================== 04 the old town (human scale)
+const lamps = [];
+const glowTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d'), grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grd.addColorStop(0, 'rgba(255,214,150,1)'); grd.addColorStop(0.4, 'rgba(255,190,120,0.45)'); grd.addColorStop(1, 'rgba(255,170,100,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+const bulbGeo = new THREE.SphereGeometry(0.045, 10, 8);
+const poolGeo = new THREE.PlaneGeometry(1.6, 1.6);
+// A KayKit streetlight with a glowing bulb and a pool of light. Only a few get a real light (o.real) to keep shading cheap.
+async function lamp(x, z, rot, o = {}) {
+  const obj = await place(C + 'streetlight.gltf', x, z, { rot, y: o.y || 0 });
+  obj.updateMatrixWorld(true);
+  const head = new THREE.Vector3(-0.2, 0.9, 0).applyMatrix4(obj.matrixWorld);
+  const bulb = new THREE.Mesh(bulbGeo, hideOutline(new THREE.MeshBasicMaterial({ color: 0xfff1cc })));
+  bulb.position.copy(head).y -= 0.03;
+  const pool = new THREE.Mesh(poolGeo, hideOutline(new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })));
+  pool.rotation.x = -Math.PI / 2; pool.position.set(head.x, (o.y || 0) + 0.125, head.z);
+  scene.add(bulb, pool);
+  let light = null;
+  if (o.real) {
+    light = new THREE.PointLight(0xffc98a, 0, 3.6, 1.6);
+    light.position.copy(head).y -= 0.08;
+    scene.add(light);
+  }
+  lamps.push({ bulb, light, pool });
+}
+onTime.push(L => {
+  for (const l of lamps) {
+    if (l.light) l.light.intensity = L.lamps * 3.2;
+    l.pool.material.opacity = L.lamps * 0.5;
+    l.bulb.material.color.setRGB(1, 0.94 * (0.55 + 0.45 * L.lamps), 0.8 * (0.4 + 0.6 * L.lamps));
+  }
+});
+
+// ---------- traffic ----------
+function carRoute(points) {
+  const path = new THREE.CurvePath();
+  path.add(new THREE.LineCurve3(points[0], points[1]));
+  path.add(new THREE.QuadraticBezierCurve3(points[1], points[2], points[3]));
+  path.add(new THREE.LineCurve3(points[3], points[4]));
+  return path;
+}
+const RV = (x, z) => new THREE.Vector3(x, 0.17, z);
+const ROUTE_A = carRoute([RV(-6.4, 4.42), RV(3.0, 4.42), RV(4.42, 4.42), RV(4.42, 3.0), RV(4.42, -6.4)]);
+const ROUTE_B = carRoute([RV(3.58, -6.4), RV(3.58, 2.7), RV(3.58, 3.58), RV(2.7, 3.58), RV(-6.4, 3.58)]);
+const cars = [];
+async function car(path, file, phase, speed) {
+  const obj = await place(C + file, 0, 0, {});
+  const wheels = [];
+  obj.traverse(n => { if (/wheel/i.test(n.name)) wheels.push(n); });
+  cars.push({ obj, path, u: phase, speed, wheels, len: path.getLength() });
+}
+const carP = new THREE.Vector3(), carT = new THREE.Vector3();
+function stepCars(dt) {
+  for (const c of cars) {
+    c.u = (c.u + (c.speed * dt) / c.len) % 1;
+    c.path.getPointAt(c.u, carP);
+    c.path.getTangentAt(c.u, carT);
+    c.obj.position.copy(carP);
+    c.obj.rotation.y = Math.atan2(carT.x, carT.z);
+    c.obj.scale.setScalar(Math.min(1, Math.min(c.u, 1 - c.u) / 0.035));
+    for (const w of c.wheels) w.rotation.x += (c.speed * dt) / 0.08;
+  }
+}
+
+// ---------- layout ----------
+function buildTown(jobs) {
+  const top = new THREE.Mesh(new THREE.BoxGeometry(11.6, 0.32, 11.6), toon({ color: 0x9fd07a }));
+  top.position.y = -0.16; top.receiveShadow = true; top.castShadow = true;
+  scene.add(top);
+
+  const P = (path, x, z, o) => jobs.push(place(path, x, z, o));
+  for (const x of [-4, -2, 2]) P(C + 'road_straight.gltf', x, 4, { rot: 90 });
+  P(C + 'road_straight_crossing.gltf', 0, 4, { rot: 90 });
+  for (const z of [-4, -2, 0, 2]) P(C + 'road_straight.gltf', 4, z, { rot: 0 });
+  P(C + 'road_corner_curved.gltf', 4, 4, { rot: -90 });
+  // houses: low along the front, tall at the back; two colour families
+  P(C + 'building_A.gltf', -4, 2, { kind: 'bldgB' });
+  P(C + 'building_B.gltf', -2, 2, { kind: 'bldgA' });
+  P(C + 'building_E.gltf', 0, 2, { kind: 'bldgA' });
+  P(C + 'building_F.gltf', 2, 0, { rot: 90, kind: 'bldgB' });
+  P(C + 'building_C.gltf', 2, -2, { rot: 90, kind: 'bldgA' });
+  P(C + 'building_H.gltf', 2, -4, { rot: 90, kind: 'bldgB' });
+  P(C + 'building_G.gltf', -2, -4, { kind: 'bldgA' });
+  P(C + 'building_D.gltf', -4, -4, { kind: 'bldgB' });
+  for (const [x, z] of [[2, 2], [-4, 0], [-2, 0], [0, 0], [-4, -2], [-2, -2], [0, -2], [0, -4]]) P(C + 'base.gltf', x, z, {});
+  // corner plaza: the purple bench under a jacaranda
+  P(C + 'bench.gltf', 1.5, 2.86, { scale: 1.3, flat: 0xa98ae8 });
+  P(C + 'bush.gltf', 1.15, 1.35, {});
+  P(C + 'bush.gltf', 1.42, 1.25, { scale: 0.8 });
+  P(C + 'firehydrant.gltf', 2.9, 1.25, {});
+  P(C + 'trash_A.gltf', 2.95, 2.0, {});
+  P(C + 'trafficlight_A.gltf', -1.02, 4.98, { rot: 180 });
+  P(C + 'trafficlight_A.gltf', 1.02, 3.02, {});
+  // garden behind the front row
+  P(C + 'bench.gltf', -1.6, -1.1, { rot: 90, scale: 1.3, flat: 0xa98ae8 });
+  P(N + 'rock_single_C.gltf', -3.4, 0.9, { scale: 0.8 });
+  P(N + 'rock_single_E.gltf', -0.2, -1.9, { scale: 0.7, rot: 40 });
+  P(C + 'box_A.gltf', -1.25, 1.2, { rot: 20 });
+  jobs.push(lamp(2.95, 2.95, 45, { real: true }), lamp(-1, 2.95, 0, { real: true }), lamp(-3, 2.95, 0, { real: true }), lamp(2.95, -1, 90, { real: true }));
+  jobs.push(car(ROUTE_A, 'car_taxi.gltf', 0.12, 1.15), car(ROUTE_A, 'car_sedan.gltf', 0.62, 1.05),
+            car(ROUTE_B, 'car_hatchback.gltf', 0.3, 1.1), car(ROUTE_B, 'car_stationwagon.gltf', 0.8, 1.0));
+
+  // jacarandas: one on the plaza, a grove in the garden, and a frame that is low in front and tall at the back
+  jacaranda(2.35, 2.25, 0, 0.88, 11);
+  [[-2.7, 0.1, 0.9], [-0.6, -0.5, 1.0], [-2.3, -2.3, 0.95], [0.4, -3.3, 1.15], [-4.2, -1.2, 1.05]]
+    .forEach(([x, z, s], i) => jacaranda(x, z, 0, s, 21 + i));
+  [[-5.45, 3.6, 0.78], [-5.45, 0.8, 0.9], [-5.45, -2.4, 1.02], [-4.2, -5.45, 1.15], [-1.3, -5.45, 1.28], [1.6, -5.45, 1.24], [4.5, -5.45, 1.1], [5.45, -2.2, 0.95]]
+    .forEach(([x, z, s], i) => jacaranda(x, z, 0, s, 41 + i));
+}
+
+// ===================================================================== 05 jacarandas
+// Each tree is grown from a seed: a leaning trunk, three or four arching limbs, forked branches and thin sprays.
+// Blossom clumps sit only at the branch ends, so the dark limbs show through the gaps in the crown.
+const J = { tubes: [], puffs: [], blooms: [], tips: [], ground: [] };
+const PUFF_COLS = ['#b7a0ee', '#a98ee6', '#c4b0f5', '#9f84e0', '#b095ea'].map(c => new THREE.Color(c));
+const BLOOM_COLS = ['#d9ccfb', '#cbb9f7', '#bfa8f2', '#9478d8', '#e6dcfd', '#a78be4'].map(c => new THREE.Color(c));
+const LEAF_COL = new THREE.Color('#9ccf86');
+
+// A tapered tube along a curve: seg + 1 rings of rad vertices.
+function tubeGeo(curve, r0, r1, seg, rad) {
+  const frames = curve.computeFrenetFrames(seg, false);
+  const pos = [], nor = [], idx = [], P = new THREE.Vector3();
+  for (let i = 0; i <= seg; i++) {
+    const t = i / seg, r = lerp(r0, r1, t), Nn = frames.normals[i], Bn = frames.binormals[i];
+    curve.getPointAt(t, P);
+    for (let j = 0; j < rad; j++) {
+      const a = (j / rad) * Math.PI * 2, cs = Math.cos(a), sn = Math.sin(a);
+      const nx = cs * Nn.x + sn * Bn.x, ny = cs * Nn.y + sn * Bn.y, nz = cs * Nn.z + sn * Bn.z;
+      pos.push(P.x + r * nx, P.y + r * ny, P.z + r * nz);
+      nor.push(nx, ny, nz);
+    }
+  }
+  for (let i = 0; i < seg; i++) for (let j = 0; j < rad; j++) {
+    const a = i * rad + j, b = i * rad + (j + 1) % rad, c = a + rad, d = b + rad;
+    idx.push(a, b, c, b, d, c);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setIndex(idx);
+  return g;
+}
+
+// sink: where the tree's parts go. The default collects everything for shared instanced meshes.
+const J_SINK = {
+  tube: g => J.tubes.push(g),
+  puff: p => { J.puffs.push(p); J.tips.push({ x: p.x, y: p.y, z: p.z, floor: p.floor }); },
+  bloom: b => J.blooms.push(b)
+};
+function growTree(x, y, z, s, seed, sink, o = {}) {
+  const r = mulberry(seed * 7919 + 13);
+  const V = (a, b, c) => new THREE.Vector3(x + a, y + b, z + c);
+  const dirOf = (az, el) => new THREE.Vector3(Math.cos(az) * Math.cos(el), Math.sin(el), Math.sin(az) * Math.cos(el));
+  const clump = (c, rad) => {
+    const leafy = r() < 0.07;
+    sink.puff({ x: c.x, y: c.y, z: c.z, r: rad, sy: 0.68 + r() * 0.14, rot: r() * 6.283, col: leafy ? LEAF_COL : PUFF_COLS[Math.floor(r() * PUFF_COLS.length)], floor: y });
+    const n = o.sparse ? 2 : 5 + Math.floor(r() * 5);
+    for (let i = 0; i < n; i++) {
+      const a = r() * 6.283, e = (r() - 0.62) * 1.9, d = rad * (0.82 + r() * 0.5);
+      sink.bloom({ x: c.x + Math.cos(a) * Math.cos(e) * d, y: c.y + Math.sin(e) * d * 0.8, z: c.z + Math.sin(a) * Math.cos(e) * d,
+        r: rad * (0.15 + r() * 0.15), col: BLOOM_COLS[Math.floor(r() * BLOOM_COLS.length)] });
+    }
+  };
+  const H = (0.95 + r() * 0.3) * s, lx = (r() - 0.5) * 0.5 * s, lz = (r() - 0.5) * 0.5 * s;
+  const top = V(lx, H, lz);
+  sink.tube(tubeGeo(new THREE.CatmullRomCurve3([V(0, -0.06, 0), V(lx * 0.12, H * 0.4, lz * 0.12), V(lx * 0.7, H * 0.8, lz * 0.7), top]), 0.105 * s, 0.062 * s, 6, 7));
+  const n1 = o.limbs || 3 + Math.floor(r() * 2), a0 = r() * 6.283;
+  for (let i = 0; i < n1; i++) {
+    const az = a0 + ((i + (r() - 0.5) * 0.5) / n1) * 6.283, el = 0.5 + r() * 0.35, L1 = (0.95 + r() * 0.35) * s;
+    const d1 = dirOf(az, el);
+    const end = top.clone().addScaledVector(d1, L1);
+    const ctrl = top.clone().addScaledVector(d1, L1 * 0.45); ctrl.y += L1 * 0.24;
+    const limb = new THREE.QuadraticBezierCurve3(top, ctrl, end);
+    sink.tube(tubeGeo(limb, 0.058 * s, 0.03 * s, 5, 6));
+    const n2 = o.sparse ? 1 : 2 + Math.floor(r() * 2);
+    for (let j = 0; j < n2; j++) {
+      const t = n2 === 1 ? 0.98 : 0.5 + 0.48 * (j / (n2 - 1));
+      const start = limb.getPointAt(t);
+      const az2 = az + (j % 2 ? 1 : -1) * (0.4 + r() * 0.65) * (t > 0.9 ? 0.45 : 1), el2 = 0.12 + r() * 0.42, L2 = (0.5 + r() * 0.3) * s;
+      const d2 = dirOf(az2, el2);
+      const e2 = start.clone().addScaledVector(d2, L2); e2.y -= 0.1 * L2;
+      const c2 = start.clone().addScaledVector(d2, L2 * 0.55); c2.y += L2 * 0.18;
+      const branch = new THREE.QuadraticBezierCurve3(start, c2, e2);
+      sink.tube(tubeGeo(branch, 0.028 * s, 0.012 * s, 4, 5));
+      clump(e2, (0.27 + r() * 0.12) * s);
+      if (o.sparse) continue;
+      const m = 1 + Math.floor(r() * 2);
+      for (let k = 0; k < m; k++) {
+        const st = branch.getPointAt(0.4 + r() * 0.35);
+        const d3 = dirOf(az2 + (k ? 1 : -1) * (0.7 + r() * 0.5), -0.05 + r() * 0.4), L3 = (0.26 + r() * 0.18) * s;
+        const e3 = st.clone().addScaledVector(d3, L3);
+        const c3 = st.clone().addScaledVector(d3, L3 * 0.5); c3.y += L3 * 0.2;
+        sink.tube(tubeGeo(new THREE.QuadraticBezierCurve3(st, c3, e3), 0.014 * s, 0.007 * s, 3, 4));
+        clump(e3, (0.17 + r() * 0.09) * s);
+      }
+    }
+  }
+}
+function jacaranda(x, z, y, s, seed, o = {}) {
+  growTree(x, y, z, s, seed, J_SINK, o);
+  J.ground.push([x, y + (o.ground ?? 0.115), z, 1.15 * s]);
+}
+
+// A flowering bush with no trunk, for ledges and planters.
+function bush(x, y, z, rad, seed) {
+  const r = mulberry(seed * 131 + 7);
+  J.puffs.push({ x, y: y + rad * 0.45, z, r: rad, sy: 0.62 + r() * 0.14, rot: r() * 6.283, col: r() < 0.12 ? LEAF_COL : PUFF_COLS[Math.floor(r() * PUFF_COLS.length)], floor: y });
+  for (let i = 0; i < 5; i++) {
+    const a = r() * 6.283, dd = rad * (0.7 + r() * 0.5);
+    J.blooms.push({ x: x + Math.cos(a) * dd, y: y + rad * (0.25 + r() * 0.55), z: z + Math.sin(a) * dd, r: rad * (0.16 + r() * 0.14), col: BLOOM_COLS[Math.floor(r() * BLOOM_COLS.length)] });
+  }
+}
+
+// A faceted, slightly lumpy ball: the low-poly look of the KayKit models.
+function lumpGeo(detail, lump, seed) {
+  const g = new THREE.IcosahedronGeometry(1, detail), p = g.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    const h = Math.sin(v.x * 12.9898 + v.y * 78.233 + v.z * 37.719 + seed) * 43758.5453;
+    v.multiplyScalar(1 + ((h - Math.floor(h)) - 0.5) * lump);
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+const puffGeoJ = lumpGeo(1, 0.22, 1.7);
+const bloomGeoJ = new THREE.IcosahedronGeometry(1, 0);
+const puffMat = hideOutline(addWind(toon({ color: 0xffffff }), 0.05));
+const bloomMat = hideOutline(addWind(toon({ color: 0xffffff }), 0.06));
+
+// A small tree as one mesh (bark and blossoms in vertex colours), for places that move, like tower roofs.
+function miniTreeGeo(seed, s) {
+  const parts = [], bark = new THREE.Color(0x6f4d47), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+  const paint = (g, col) => {
+    const n = g.attributes.position.count, c = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { c[i * 3] = col.r; c[i * 3 + 1] = col.g; c[i * 3 + 2] = col.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    return g;
+  };
+  growTree(0, 0, 0, s, seed, {
+    tube: g => parts.push(paint(g.toNonIndexed(), bark)),
+    puff: p => {
+      const g = puffGeoJ.clone();
+      e.set(0, p.rot, 0); q.setFromEuler(e);
+      g.applyMatrix4(m.compose(new THREE.Vector3(p.x, p.y, p.z), q, new THREE.Vector3(p.r, p.r * p.sy, p.r)));
+      parts.push(paint(g, p.col));
+    },
+    bloom: () => {}
+  }, { sparse: true, limbs: 3 });
+  for (const g of parts) for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'color') g.deleteAttribute(k);
+  return mergeGeometries(parts);
+}
+const miniTreeMat = toon({ color: 0xffffff, vertexColors: true });
+let miniTreeGeos = null;
+function miniTree(i) {
+  if (!miniTreeGeos) miniTreeGeos = [miniTreeGeo(301, 0.62), miniTreeGeo(302, 0.7), miniTreeGeo(303, 0.56)];
+  const mesh = new THREE.Mesh(miniTreeGeos[i % 3], miniTreeMat);
+  mesh.castShadow = true;
+  return mesh;
+}
+
+const petals = { mesh: null, s: [] };
+function finishJacarandas() {
+  const bark = new THREE.Mesh(mergeGeometries(J.tubes), toon({ color: 0x6f4d47 }));
+  bark.castShadow = true; bark.receiveShadow = true;
+  scene.add(bark);
+
+  const d = new THREE.Object3D();
+  const puffs = new THREE.InstancedMesh(puffGeoJ, puffMat, J.puffs.length);
+  J.puffs.forEach((p, i) => {
+    d.position.set(p.x, p.y, p.z); d.rotation.set(0, p.rot, 0); d.scale.set(p.r, p.r * p.sy, p.r); d.updateMatrix();
+    puffs.setMatrixAt(i, d.matrix); puffs.setColorAt(i, p.col);
+  });
+  puffs.castShadow = true; puffs.receiveShadow = true; puffs.frustumCulled = false;
+  const rr = mulberry(5);
+  const blooms = new THREE.InstancedMesh(bloomGeoJ, bloomMat, J.blooms.length);
+  J.blooms.forEach((b, i) => {
+    d.position.set(b.x, b.y, b.z); d.rotation.set(rr() * 6, rr() * 6, rr() * 6); d.scale.setScalar(b.r); d.updateMatrix();
+    blooms.setMatrixAt(i, d.matrix); blooms.setColorAt(i, b.col);
+  });
+  blooms.castShadow = true; blooms.frustumCulled = false;
+  scene.add(puffs, blooms);
+
+  // fallen petals under every tree
+  const ground = [];
+  for (const [x, y, z, rad] of J.ground) {
+    const n = Math.round(46 * rad);
+    for (let k = 0; k < n; k++) {
+      const a = rr() * 6.283, dist = Math.sqrt(rr()) * rad;
+      ground.push([x + Math.cos(a) * dist, y + rr() * 0.004, z + Math.sin(a) * dist]);
+    }
+  }
+  const gm = new THREE.InstancedMesh(new THREE.CircleGeometry(0.045, 6), hideOutline(toon({ color: 0xffffff, side: THREE.DoubleSide })), ground.length);
+  ground.forEach(([x, y, z], i) => {
+    d.position.set(x, y, z); d.rotation.set(-Math.PI / 2, 0, rr() * 6); d.scale.setScalar(0.55 + rr() * 0.9); d.updateMatrix();
+    gm.setMatrixAt(i, d.matrix); gm.setColorAt(i, BLOOM_COLS[Math.floor(rr() * BLOOM_COLS.length)]);
+  });
+  gm.receiveShadow = true; gm.frustumCulled = false;
+  scene.add(gm);
+
+  // petals in the air
+  const n = isPhone() ? 110 : 220;
+  petals.mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.075, 0.048), hideOutline(toon({ color: 0xcdbbf6, side: THREE.DoubleSide })), n);
+  petals.mesh.frustumCulled = false;
+  for (let i = 0; i < n; i++) petals.s.push(spawnPetal(true));
+  scene.add(petals.mesh);
+}
+function spawnPetal(anywhere) {
+  const t = J.tips[Math.floor(rnd() * J.tips.length)];
+  return { x: t.x + (rnd() - 0.5) * 0.5, z: t.z + (rnd() - 0.5) * 0.5, y: anywhere ? lerp(t.floor + 0.2, t.y, rnd()) : t.y - 0.1,
+    floor: t.floor + 0.13, v: 0.16 + rnd() * 0.2, ph: rnd() * 6.283, sp: 1 + rnd() * 2 };
+}
+const petalDummy = new THREE.Object3D();
+function stepPetals(dt, t) {
+  petals.s.forEach((p, i) => {
+    p.y -= p.v * dt;
+    p.x += (Math.sin(t * 1.1 + p.ph) * 0.18 + 0.14) * dt;
+    p.z += Math.cos(t * 0.9 + p.ph) * 0.12 * dt;
+    if (p.y < p.floor) petals.s[i] = p = spawnPetal(false);
+    petalDummy.position.set(p.x, p.y, p.z);
+    petalDummy.rotation.set(t * p.sp + p.ph, t * 0.7 * p.sp, p.ph);
+    petalDummy.updateMatrix();
+    petals.mesh.setMatrixAt(i, petalDummy.matrix);
+  });
+  petals.mesh.instanceMatrix.needsUpdate = true;
+}
+
+// ===================================================================== 06 megastructures: the charts themselves
+// One rule for the whole city: one floor is one percent. A tower's height is the share of games in that group with
+// 100,000+ owners; the foundation under the town is all games, split into five owner tiers.
+// Each district has its own architecture, and the form says what the group is:
+//   systems   - bundled glass shafts: one shaft per operating system
+//   languages - round stone towers with a spiral ramp and a ring of flags (more languages, more flags)
+//   DLC       - stacked modules: a base game with expansion packs bolted on top
+//   combo     - plain housing slabs in front (1 language), braced glass megatowers behind (11+ languages)
+const FLOOR = 0.4;                       // world units per percentage point
+const TW = 3.8, TD = 3.0, CROWN_H = 1.5; // default footprint, height of the sign band on top
+const CREAM = 0xefe5d2, CREAM_DARK = 0xdccfb8, SIGN_DARK = 0x2a2140;
+
+// ---------- data ----------
+function tally(sel) {
+  const t = [0, 0, 0, 0, 0];
+  for (let s = 0; s < 3; s++) for (let l = 0; l < 4; l++) for (let d = 0; d < 4; d++)
+    if (sel(s, l, d)) for (let k = 0; k < 5; k++) t[k] += CELLS[s][l][d][k];
+  const n = t[0] + t[1] + t[2] + t[3] + t[4];
+  return { n, tiers: t, share: n ? (100 * (t[2] + t[3] + t[4])) / n : 0 };
+}
+const ALL = tally(() => true);
+const SYS_L = ['1 system', '2 systems', '3 systems'];
+const LANG_L = ['1 language', '2–5 languages', '6–10 languages', '11+ languages'];
+const DLC_L = ['No DLC', '1 DLC', '2–5 DLC', '6+ DLC'];
+const TIER = [
+  { name: 'Common', range: 'under 20k owners', color: 0x7d8496, wall: 0xb7bbc7 },
+  { name: 'Uncommon', range: '20k–100k owners', color: 0x369e4e, wall: 0xa5cda3 },
+  { name: 'Rare', range: '100k–500k owners', color: 0x2d74d6, wall: 0x9bb8e8 },
+  { name: 'Epic', range: '500k–2m owners', color: 0xb073da, wall: 0xcfb5ec },
+  { name: 'Legendary', range: '2m+ owners', color: 0xe08a1c, wall: 0xf1c477 }
+];
+const DISTRICTS = {
+  systems: { name: 'Systems', accent: 0x3f8fe0, style: 'bundle', towers: [0, 1, 2].map(i => ({ id: 'sys' + i, label: SYS_L[i], cores: i + 1, x: 15.6, z: -4 - i * 5, rotY: 90, ...tally(s => s === i) })) },
+  languages: { name: 'Languages', accent: 0x25a58a, style: 'babel', towers: [0, 1, 2, 3].map(i => ({ id: 'lang' + i, label: LANG_L[i], flags: [1, 3, 7, 12][i], x: -15.6, z: 1.5 - i * 5, rotY: 90, ...tally((s, l) => l === i) })) },
+  dlc: { name: 'DLC', accent: 0xe39a2b, style: 'stack', towers: [0, 1].map(i => ({ id: 'dlc' + i, label: i ? 'Has DLC' : 'No DLC', x: 15.6, z: 8 - i * 5, rotY: 90, ...tally((s, l, d) => (i ? d > 0 : d === 0)) })) },
+  combo: {
+    name: 'Combo', accent: 0x8a6ad6, style: 'slab',
+    towers: [0, 1, 2, 3].map(i => ({ id: 'c1_' + i, label: '1 language · ' + DLC_L[i], short: DLC_L[i], series: 0, x: -7.5 + i * 5, z: -15, rotY: 0, ...tally((s, l, d) => s === 0 && l === 0 && d === i) }))
+      .concat([0, 1, 2, 3].map(i => ({ id: 'c11_' + i, label: '11+ languages · ' + DLC_L[i], short: DLC_L[i], series: 1, style: 'glass', x: -7.5 + i * 5, z: -20.5, rotY: 0, ...tally((s, l, d) => s === 0 && l === 3 && d === i) })))
+  },
+  yours: { name: 'Your game', accent: 0xf2b632, style: 'scaffold', towers: [{ id: 'yours', label: 'Your game', x: -15.6, z: 8.8, rotY: 90, editable: true, ...tally((s, l, d) => s === 0 && l === 0 && d === 0) }] }
+};
+
+// ---------- the facade shader: floors, windows, megabeams and night lights, in four architectural styles ----------
+const FAC_VERT_HEAD = 'varying vec3 vFp; varying vec3 vFn; varying vec3 vFw;\n';
+const FAC_VERT_MAIN = `
+  #ifdef USE_INSTANCING
+    mat4 facM = modelMatrix * instanceMatrix;
+  #else
+    mat4 facM = modelMatrix;
+  #endif
+  vec3 facS = vec3( length( facM[0].xyz ), length( facM[1].xyz ), length( facM[2].xyz ) );
+  vFp = transformed * facS;
+  vFn = normal;
+  vFw = normalize( mat3( facM ) * ( normal / max( facS, vec3( 1e-4 ) ) ) );
+`;
+const FAC_FRAG_HEAD = `
+  uniform float uTime, uNight, uSeed, uBand, uWin, uGlow, uStyle, uRound, uRadius, uBay;
+  uniform vec3 uSunDir, uSunColor, uGlassA, uGlassB, uAccent, uTint;
+  uniform vec2 uHalf;
+  varying vec3 vFp; varying vec3 vFn; varying vec3 vFw;
+  float fHash( vec2 p ) { p = fract( p * vec2( 123.34, 456.21 ) ); p += dot( p, p + 45.32 ); return fract( p.x * p.y ); }
+`;
+const FAC_FRAG_MAIN = `
+  {
+    vec3 fan = abs( vFn );
+    float side = 1.0 - step( 0.5, fan.y );
+    float fu, halfW;
+    if ( uRound > 0.5 ) {
+      fu = atan( vFp.z, abs( vFp.x ) + abs( vFp.z ) < 1e-5 ? 1.0 : vFp.x ) * uRadius;      // atan( 0, 0 ) is undefined
+      halfW = 3.14159265 * uRadius;
+    } else {
+      float xFace = step( fan.z, fan.x );
+      fu = mix( vFp.x, vFp.z, xFace );
+      halfW = mix( uHalf.x, uHalf.y, xFace );
+    }
+    vec2 fg = vec2( ( fu + halfW ) / uBay, vFp.y / ${FLOOR.toFixed(3)} );
+    vec2 fid = floor( fg ), ff = fract( fg );
+    vec2 faa = vec2( length( vec2( fwidth( vFp.x ), fwidth( vFp.z ) ) ) / uBay, fwidth( vFp.y ) / ${FLOOR.toFixed(3)} );
+    float detail = 1.0 - smoothstep( 0.28, 0.75, max( faa.x, faa.y ) );
+    float lvl = mod( fg.y, 10.0 );
+    float beam = 1.0 - smoothstep( 0.12, 0.3, min( lvl, 10.0 - lvl ) );
+    float r1 = fHash( fid + uSeed ), r2 = fHash( fid * 1.31 + uSeed + 7.7 );
+    vec3 wall = diffuseColor.rgb;
+    float win = 0.0, litFrac = 0.56, blind = 0.75, cover = 0.36, sunGain = 0.18, coolLamps = 0.86, em = 0.0;
+    vec3 gA = uGlassA, gB = uGlassB;
+    if ( uStyle < 0.5 ) {
+      // housing: punched windows, some with the blinds drawn
+      float wx = smoothstep( 0.13, 0.13 + faa.x, ff.x ) * ( 1.0 - smoothstep( 0.87 - faa.x, 0.87, ff.x ) );
+      float wy = smoothstep( 0.26, 0.26 + faa.y, ff.y ) * ( 1.0 - smoothstep( 0.80 - faa.y, 0.80, ff.y ) );
+      win = wx * wy;
+    } else if ( uStyle < 1.5 ) {
+      // curtain wall: glass from slab to slab with thin mullions
+      float wx = smoothstep( 0.03, 0.03 + faa.x, ff.x ) * ( 1.0 - smoothstep( 0.97 - faa.x, 0.97, ff.x ) );
+      float wy = smoothstep( 0.11, 0.11 + faa.y, ff.y ) * ( 1.0 - smoothstep( 0.98 - faa.y, 0.98, ff.y ) );
+      win = wx * wy; litFrac = 0.42; blind = 0.0; cover = 0.84; sunGain = 0.3; coolLamps = 0.45; em = 0.4;
+      // tinted glass: it keeps its own colour at any hour, picks up more sky the higher it is,
+      // and carries soft diagonal bands of reflected cloud; neighbouring panes differ only a little
+      float lum = dot( uGlassA, vec3( 0.3, 0.5, 0.2 ) );
+      float sky = clamp( vFp.y / 26.0, 0.0, 1.0 );
+      float band = 0.5 + 0.5 * sin( fu * 0.7 + vFp.y * 0.45 + uSeed );
+      gA = mix( uTint, uGlassA, 0.2 ) * ( 0.5 + 0.8 * lum ) * ( 0.84 + 0.22 * sky ) * ( 0.93 + 0.12 * band );
+      gB = gA * 1.1;
+      beam *= 0.6;
+    } else if ( uStyle < 2.5 ) {
+      // stone tower: one deep arched opening per bay
+      float ax = abs( ff.x - 0.5 );
+      float rect = ( 1.0 - smoothstep( 0.2 - faa.x, 0.2, ax ) ) * smoothstep( 0.16, 0.16 + faa.y, ff.y ) * ( 1.0 - step( 0.56, ff.y ) );
+      float cap = ( 1.0 - smoothstep( 0.2 - faa.x, 0.2, length( vec2( ax, ( ff.y - 0.56 ) * 0.84 ) ) ) ) * step( 0.56, ff.y );
+      win = max( rect, cap ) * step( 0.08, fHash( fid * 0.7 + uSeed + 3.0 ) );
+      litFrac = 0.6; blind = 0.15; cover = 0.2;
+      gA = uGlassA * 0.5; gB = uGlassA * 0.66;
+    } else {
+      // stacked modules: ribbed panels and a few square ports
+      float rib = step( 0.5, fract( ( fu + halfW ) / 0.19 ) ) * ( 1.0 - smoothstep( 0.2, 0.7, faa.x * uBay / 0.19 ) );
+      wall *= 1.0 - 0.08 * rib * side;
+      float cell = step( mod( fid.x, 2.0 ), 0.5 ) * step( mod( fid.y + floor( fid.x * 0.5 ), 3.0 ), 0.5 );
+      float wx = smoothstep( 0.2, 0.2 + faa.x, ff.x ) * ( 1.0 - smoothstep( 0.8 - faa.x, 0.8, ff.x ) );
+      float wy = smoothstep( 0.25, 0.25 + faa.y, ff.y ) * ( 1.0 - smoothstep( 0.78 - faa.y, 0.78, ff.y ) );
+      win = wx * wy * cell; litFrac = 0.8; blind = 0.0; cover = 0.07;
+      beam = 0.0;
+    }
+    win *= side * ( 1.0 - beam ) * uWin;
+    wall *= 1.0 + 0.07 * ( fHash( vec2( fid.x, floor( fg.y / 5.0 ) ) + uSeed * 2.0 ) - 0.5 ) * side;
+    if ( uStyle < 2.5 ) {
+      wall *= 1.0 - 0.10 * ( 1.0 - smoothstep( 0.0, 0.1 + faa.y, ff.y ) ) * side * detail;
+      wall *= 1.0 - 0.10 * side * ( 1.0 - smoothstep( 0.0, 2.2, 10.0 - lvl ) );
+    }
+    float stripe;
+    if ( uRound > 0.5 ) stripe = uBand * side * ( 1.0 - step( 0.1, fract( fu / ( 6.2831853 * uRadius ) * 2.0 - vFp.y / 4.0 ) ) );
+    else stripe = uBand * side * step( fu + halfW, 0.62 );
+    wall = mix( wall, uAccent, stripe * 0.88 );
+    win *= 1.0 - stripe;
+    vec3 glass = mix( gA, gB, r1 );
+    glass = mix( glass, wall * 0.9, step( 0.8, r2 ) * blind );
+    float sunFace = max( dot( normalize( vFw + vec3( 0.0, 1e-5, 0.0 ) ), uSunDir ), 0.0 );
+    glass += uSunColor * sunFace * sunFace * sunGain;
+    // part of the glass colour is its own light (reflected sky), so coloured sunlight cannot turn it to brick
+    vec3 gMid = mix( gA, gB, 0.5 );
+    float keep = 1.0 - em * 0.75;
+    totalEmissiveRadiance += gMid * em * mix( cover * uWin * side * ( 1.0 - stripe ), win, detail ) * ( 1.0 - 0.8 * uNight );
+    vec3 farTone = mix( wall, mix( wall, gMid * keep, cover * uWin ), side );
+    diffuseColor.rgb = mix( farTone, mix( wall, glass * keep, win ), detail );
+    float dusk = smoothstep( 0.05, 0.9, uNight );
+    float lit = step( 1.0 - litFrac * dusk, r2 );
+    vec3 lampC = mix( vec3( 1.0, 0.76, 0.44 ), vec3( 0.64, 0.82, 1.0 ), step( coolLamps, r1 ) );
+    float tw = 0.88 + 0.12 * sin( uTime * 0.6 + r1 * 31.0 );
+    float glowAmt = mix( cover * litFrac * dusk * side * uWin * 0.8, win * lit, detail );
+    totalEmissiveRadiance += lampC * glowAmt * smoothstep( 0.0, 0.4, uNight ) * tw * 0.95 + uAccent * uGlow * 0.2 + uAccent * stripe * uNight * 0.55;
+  }
+`;
+function facadeMaterial(o) {
+  const m = toon({ color: o.color ?? CREAM });
+  const f = m.userData.fac = {
+    seed: { value: o.seed || 0 }, accent: { value: new THREE.Color(o.accent ?? 0xffffff) }, band: { value: o.band ? 1 : 0 },
+    half: { value: new THREE.Vector2((o.w || 1) / 2, (o.d || 1) / 2) }, win: { value: o.win ?? 1 }, glow: { value: 0 },
+    style: { value: o.style || 0 }, round: { value: o.round ? 1 : 0 }, radius: { value: o.radius || 1 }, bay: { value: o.bay || (o.style === 1 ? 0.38 : 0.475) },
+    tint: { value: new THREE.Color(o.tint ?? 0x9fb6d8) }
+  };
+  m.userData.baseCol = m.color.clone();
+  m.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, {
+      uTime: U.time, uNight: U.night, uSunDir: U.sunDir, uSunColor: U.sunColor, uGlassA: U.glassA, uGlassB: U.glassB,
+      uSeed: f.seed, uAccent: f.accent, uBand: f.band, uHalf: f.half, uWin: f.win, uGlow: f.glow,
+      uStyle: f.style, uRound: f.round, uRadius: f.radius, uBay: f.bay, uTint: f.tint
+    });
+    sh.vertexShader = FAC_VERT_HEAD + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n' + FAC_VERT_MAIN);
+    sh.fragmentShader = FAC_FRAG_HEAD + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n' + FAC_FRAG_MAIN);
+  };
+  m.customProgramCacheKey = () => 'facade';
+  return m;
+}
+
+// ---------- shared part pool: every small box on every tower in one draw call ----------
+const _m4 = new THREE.Matrix4(), _v3 = new THREE.Vector3(), _q4 = new THREE.Quaternion(), _s3 = new THREE.Vector3();
+const QID = new THREE.Quaternion(), ZERO_M = new THREE.Matrix4().makeScale(0, 0, 0), MID = new THREE.Matrix4();
+const C3 = hex => new THREE.Color(hex);
+const COL = { creamDark: C3(CREAM_DARK), beam: C3(0xe6dac5), cream: C3(0xf2e9d8), steel: C3(0x6f7d98), steelLight: C3(0xaab6cb), yellow: C3(0xf2b632), stone: C3(0xd9c7a4), dark: C3(0x3a3550) };
+class Pool {
+  constructor(cap) {
+    this.mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), hideOutline(toon({ color: 0xffffff })), cap);
+    this.n = 0; this.cap = cap; this.dirty = false;
+    for (let i = 0; i < cap; i++) { this.mesh.setMatrixAt(i, ZERO_M); this.mesh.setColorAt(i, COL.cream); }
+    this.mesh.castShadow = this.mesh.receiveShadow = true;
+    this.mesh.frustumCulled = false;
+    scene.add(this.mesh);
+  }
+  alloc(n, color) {
+    const b = this.n; this.n += n;
+    if (this.n > this.cap) throw new Error('part pool is full');
+    for (let i = b; i < b + n; i++) this.mesh.setColorAt(i, color);
+    this.mesh.instanceColor.needsUpdate = true;
+    return b;
+  }
+  // a box centred at (x, y, z) in frame G with size (sx, sy, sz) and an optional rotation
+  put(i, G, x, y, z, sx, sy, sz, q) {
+    _m4.compose(_v3.set(x, y, z), q || QID, _s3.set(sx, sy, sz)).premultiply(G);
+    this.mesh.setMatrixAt(i, _m4); this.dirty = true;
+  }
+  hide(i) { this.mesh.setMatrixAt(i, ZERO_M); this.dirty = true; }
+  flush() { if (this.dirty) { this.mesh.instanceMatrix.needsUpdate = true; this.dirty = false; } }
+}
+let parts = null;
+
+// ---------- towers ----------
+const towers = [], towerById = {}, pickables = [], beacons = [];
+const unitCyl = new THREE.CylinderGeometry(1, 1, 1, 48, 1).translate(0, 0.5, 0);
+const signBandMat = toon({ color: SIGN_DARK });
+const roofMat = toon({ color: 0xe6dac4 }), steelMat = toon({ color: 0x8d93a3 }), darkMat = toon({ color: 0x3a3550 });
+const DIM_COL = new THREE.Color(0x9a97aa);
+
+class Tower {
+  constructor(o, district) {
+    Object.assign(this, o);
+    this.district = district;
+    const D = DISTRICTS[district];
+    this.accent = D.accent;
+    this.style = STYLES[o.style || D.style];
+    this.h = 0; this.goal = this.share * FLOOR; this.anim = null; this.secret = false;
+    this.glow = 0; this.glowTo = 0; this.dim = 0; this.dimTo = 0;
+    this.group = new THREE.Group();
+    this.group.position.set(o.x, 0, o.z);
+    this.group.rotation.y = (o.rotY || 0) * D2R;
+    scene.add(this.group);
+    this.group.updateMatrixWorld(true);
+    this.G = this.group.matrixWorld;
+    this.crown = new THREE.Group();
+    this.group.add(this.crown);
+    this.mats = [];
+    this.seedBase = towers.length * 7.31 + 1.7;
+    towers.push(this); towerById[o.id] = this;
+  }
+  facade(o) {
+    const m = facadeMaterial({ seed: this.seedBase + this.mats.length * 3.7, accent: this.accent, ...o });
+    this.mats.push(m);
+    return m;
+  }
+  shaft(mat, w, d, x = 0, z = 0, geo = unitBox) {
+    const m = new THREE.Mesh(geo, mat);
+    m.scale.set(w, 1, d); m.position.set(x, 0, z);
+    m.castShadow = m.receiveShadow = true;
+    m.userData.pick = { type: 'tower', tower: this };
+    pickables.push(m);
+    this.group.add(m);
+    return m;
+  }
+  // world position just above the roof sign: where the floating label goes
+  anchor(out) { return out.set(this.x, this.h + CROWN_H + 1.5, this.z); }
+  setHeight(h) {
+    this.h = h;
+    const hh = Math.max(h, 0.02);
+    this.style.resize(this, hh);
+    this.crown.position.y = hh;
+  }
+  grow(to, dur, delay = 0, from = this.h) {
+    this.goal = to;
+    if (reduceMotion) { this.anim = null; this.setHeight(to); this.drawSign(to / FLOOR); return; }
+    this.anim = { from, to, t: -delay, dur };
+    if (from !== this.h) { this.setHeight(from); this.drawSign(from / FLOOR); }
+  }
+  drawSign(v) {
+    const txt = this.secret ? '?' : pct(v);
+    if (txt === this.signText) return;
+    this.signText = txt;
+    const g = this.signCtx, w = 512, h = 224;
+    g.clearRect(0, 0, w, h);
+    g.fillStyle = '#' + new THREE.Color(this.accent).getHexString();
+    g.fillRect(18, 22, 10, 180);
+    g.textBaseline = 'alphabetic';
+    let size = 46;
+    const cap = this.label.toUpperCase();
+    do { g.font = `700 ${size}px ${SIGN_FONT}`; size -= 2; } while (g.measureText(cap).width > 456 && size > 22);
+    g.fillStyle = '#cdbdff';
+    g.fillText(cap, 44, 66);
+    g.font = `900 150px ${SIGN_FONT}`;
+    g.fillStyle = '#fff3d6';
+    g.fillText(txt, 40, 198);
+    this.signTex.needsUpdate = true;
+  }
+}
+
+// ---------- shared crown pieces ----------
+function makeSign(t) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 224;
+  t.signCtx = c.getContext('2d');
+  t.signTex = new THREE.CanvasTexture(c);
+  t.signTex.colorSpace = THREE.SRGBColorSpace; t.signTex.anisotropy = 8;
+  return hideOutline(new THREE.MeshBasicMaterial({ map: t.signTex, transparent: true, depthWrite: false }));
+}
+const signGeoCache = {};
+function signGeoFor(w, d) {
+  const key = w.toFixed(2) + 'x' + d.toFixed(2);
+  if (!signGeoCache[key]) {
+    const fw = Math.min(3.3, w - 0.5), fh = Math.min(1.44, fw / 2.29), sw = Math.min(2.75, d - 0.25), sh = Math.min(1.2, sw / 2.29);
+    signGeoCache[key] = mergeGeometries([
+      new THREE.PlaneGeometry(fw, fh).translate(0, CROWN_H / 2, d / 2 + 0.08),
+      new THREE.PlaneGeometry(fw, fh).rotateY(Math.PI).translate(0, CROWN_H / 2, -d / 2 - 0.08),
+      new THREE.PlaneGeometry(sw, sh).rotateY(Math.PI / 2).translate(w / 2 + 0.08, CROWN_H / 2, 0),
+      new THREE.PlaneGeometry(sw, sh).rotateY(-Math.PI / 2).translate(-w / 2 - 0.08, CROWN_H / 2, 0)]);
+  }
+  return signGeoCache[key];
+}
+function addBeacon(parent, x, y, z, phase) {
+  const b = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 8), hideOutline(new THREE.MeshBasicMaterial({ color: 0xff4a3d })));
+  b.position.set(x, y, z); b.userData.phase = phase;
+  beacons.push(b); parent.add(b);
+}
+function mast(parent, x, y, z, h) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, h, 6), steelMat);
+  m.position.set(x, y + h / 2, z);
+  parent.add(m);
+}
+const dishGeo = new THREE.SphereGeometry(0.46, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.42).rotateX(Math.PI).translate(0, 0.46, 0);
+function dish(parent, x, y, z, rot) {
+  const g = new THREE.Group();
+  const bowl = new THREE.Mesh(dishGeo, toon({ color: 0xe9edf3, side: THREE.DoubleSide }));
+  bowl.rotation.x = -0.7;
+  bowl.position.y = 0.42;
+  g.add(bowl, box(0.08, 0.5, 0.08, steelMat, 0, 0.25, 0));
+  g.position.set(x, y, z); g.rotation.y = rot;
+  parent.add(g);
+}
+// The dark sign band, the roof and whatever stands on it. Sits at the top of the tower and rides up as it grows.
+function rectCrown(t, w, d, jobs, o = {}) {
+  const i = towers.indexOf(t), roofY = CROWN_H + 0.14;
+  const band = new THREE.Mesh(unitBox, signBandMat);
+  band.scale.set(w + 0.1, CROWN_H, d + 0.1); band.castShadow = true;
+  const sign = new THREE.Mesh(signGeoFor(w, d), makeSign(t));
+  const roof = new THREE.Mesh(unitBox, roofMat);
+  roof.scale.set(w + 0.36, 0.14, d + 0.36); roof.position.y = CROWN_H; roof.castShadow = true;
+  t.crown.add(band, sign, roof);
+  const mx = w / 2 - 0.5, mz = d / 2 - 0.55;
+  if (o.spire) {
+    // a stepped glass cap and a needle
+    const cap = new THREE.Mesh(unitBox, t.facade({ style: 1, band: 0, w: w * 0.6, d: d * 0.6, color: 0xcdd0ea, tint: 0xb7a6ee }));
+    cap.scale.set(w * 0.6, 1.5, d * 0.6); cap.position.y = roofY; cap.castShadow = true;
+    const needle = new THREE.Mesh(new THREE.ConeGeometry(0.16, o.spire, 8), roofMat);
+    needle.position.y = roofY + 1.5 + o.spire / 2;
+    t.crown.add(cap, needle);
+    addBeacon(t.crown, 0, roofY + 1.55 + o.spire, 0, i * 1.7);
+  } else {
+    mast(t.crown, mx, roofY, mz, 1.9);
+    addBeacon(t.crown, mx, roofY + 1.95, mz, i * 1.7);
+  }
+  for (let a = 0; a < (o.antennas || 0); a++) mast(t.crown, -mx + a * 0.34, roofY, -mz + (a % 2) * 0.3, 1.1 + a * 0.55);
+  if (o.dish) dish(t.crown, -mx * 0.2, roofY, mz * 0.2, i * 1.1);
+  if (o.tree) {
+    const tree = miniTree(i);
+    tree.position.set(Math.min(0.5, mx - 0.6), roofY, -0.25); tree.rotation.y = i * 1.3;
+    t.crown.add(tree);
+  }
+  if (o.tank) jobs.push(place(C + 'watertower.gltf', -mx + 0.35, -mz + 0.25, { y: roofY, parent: t.crown, rot: i * 40 }));
+  if (o.crane) {
+    const yellow = toon({ color: 0xf2b632 }), crane = new THREE.Group();
+    crane.add(box(0.14, 2.6, 0.14, yellow, 0, 1.3, 0), box(3.0, 0.1, 0.1, yellow, 0.9, 2.5, 0), box(0.5, 0.26, 0.3, steelMat, -0.45, 2.42, 0), box(0.02, 0.9, 0.02, steelMat, 2.1, 2.05, 0));
+    crane.position.set(-0.6, roofY, 0.2);
+    t.crane = crane;
+    t.crown.add(crane);
+    // scaffold poles and rails: the next floors, not built yet
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) t.crown.add(box(0.06, 2.4, 0.06, steelMat, sx * (w / 2 + 0.1), roofY + 1.2, sz * (d / 2 + 0.1)));
+    for (const y of [1.1, 2.3]) {
+      t.crown.add(box(w + 0.26, 0.05, 0.05, yellow, 0, roofY + y, d / 2 + 0.1), box(w + 0.26, 0.05, 0.05, yellow, 0, roofY + y, -d / 2 - 0.1),
+                  box(0.05, 0.05, d + 0.26, yellow, w / 2 + 0.1, roofY + y, 0), box(0.05, 0.05, d + 0.26, yellow, -w / 2 - 0.1, roofY + y, 0));
+    }
+  }
+}
+function corners(t, base, w, d, H, th, ox = 0, oz = 0) {
+  let k = 0;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) parts.put(base + k++, t.G, ox + (sx * w) / 2, H / 2, oz + (sz * d) / 2, th, H, th);
+}
+function ledges(t, base, n, w, d, hh, ox = 0, oz = 0) {
+  for (let b = 0; b < n; b++) {
+    const y = (b + 1) * 10 * FLOOR;
+    if (y < hh - 0.3) parts.put(base + b, t.G, ox, y, oz, w, 0.2, d); else parts.hide(base + b);
+  }
+}
+const braceQ = (() => {
+  const mk = (span, yaw) => [1, -1].map(s => new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, s * Math.atan2(4, span), 'YXZ')));
+  return { z: mk(TW - 0.4, 0), x: mk(TD - 0.4, Math.PI / 2) };
+})();
+
+// ---------- the architectural styles ----------
+const STYLES = {
+  // plain housing slab: cream frame, punched windows
+  slab: {
+    build(t, jobs) {
+      t.fp = { w: TW, d: TD };
+      t.body = t.shaft(t.facade({ style: 0, band: 1, w: TW, d: TD }), TW, TD);
+      t.cols = parts.alloc(4, COL.creamDark);
+      t.nLedge = Math.floor(t.share / 10); t.ledge = parts.alloc(t.nLedge, COL.beam);
+      rectCrown(t, TW, TD, jobs, { tree: true, tank: true });
+    },
+    resize(t, hh) {
+      t.body.scale.y = hh;
+      corners(t, t.cols, TW, TD, hh + CROWN_H, 0.42);
+      ledges(t, t.ledge, t.nLedge, TW + 0.5, TD + 0.5, hh);
+    }
+  },
+  // the visitor's own tower: a slab under construction
+  scaffold: {
+    build(t, jobs) {
+      t.fp = { w: TW, d: TD };
+      t.body = t.shaft(t.facade({ style: 0, band: 1, w: TW, d: TD }), TW, TD);
+      t.cols = parts.alloc(4, COL.yellow);
+      t.nLedge = 9; t.ledge = parts.alloc(t.nLedge, COL.beam);
+      rectCrown(t, TW, TD, jobs, { crane: true });
+    },
+    resize(t, hh) { STYLES.slab.resize(t, hh); }
+  },
+  // braced glass megatower with a stepped cap and a needle
+  glass: {
+    build(t, jobs) {
+      t.fp = { w: TW, d: TD };
+      t.body = t.shaft(t.facade({ style: 1, band: 1, w: TW, d: TD, color: 0xd3d6ee, tint: 0xb7a6ee }), TW, TD);
+      t.cols = parts.alloc(4, COL.cream);
+      t.nLedge = Math.floor(t.share / 10); t.ledge = parts.alloc(t.nLedge, COL.beam);
+      t.brace = parts.alloc(t.nLedge * 8, COL.cream);
+      rectCrown(t, TW, TD, jobs, { spire: 2 + t.share * 0.05 });
+    },
+    resize(t, hh) {
+      t.body.scale.y = hh;
+      corners(t, t.cols, TW, TD, hh + CROWN_H, 0.44);
+      ledges(t, t.ledge, t.nLedge, TW + 0.5, TD + 0.5, hh);
+      for (let s = 0; s < t.nLedge; s++) {
+        const y = s * 4 + 2, on = hh > (s + 1) * 4 + 0.1;
+        let k = t.brace + s * 8;
+        for (const side of [1, -1]) for (let q = 0; q < 2; q++) {
+          if (on) {
+            parts.put(k++, t.G, 0, y, side * (TD / 2 + 0.05), Math.hypot(TW - 0.4, 4) - 0.2, 0.11, 0.11, braceQ.z[q]);
+            parts.put(k++, t.G, side * (TW / 2 + 0.05), y, 0, Math.hypot(TD - 0.4, 4) - 0.2, 0.11, 0.11, braceQ.x[q]);
+          } else { parts.hide(k++); parts.hide(k++); }
+        }
+      }
+    }
+  },
+  // one glass shaft per operating system, bundled and stepped
+  bundle: {
+    build(t, jobs) {
+      t.cores = t.cores || 1;
+      t.def = t.cores === 1 ? [[0, 0, 3.2, 3.0, 1]]
+        : t.cores === 2 ? [[-0.6, 0, 2.5, 3.0, 1], [1.5, 0.22, 1.5, 2.4, 0.72]]
+        : [[0, 0, 2.3, 3.0, 1], [-1.75, 0.26, 1.15, 2.3, 0.78], [1.75, -0.22, 1.15, 2.1, 0.56]];
+      const x0 = Math.min(...t.def.map(c => c[0] - c[2] / 2)), x1 = Math.max(...t.def.map(c => c[0] + c[2] / 2));
+      t.fp = { w: x1 - x0, d: 3.1, ox: (x0 + x1) / 2 };
+      t.core = t.def.map(([x, z, w, d]) => t.shaft(t.facade({ style: 1, band: 0, w, d, color: 0xc3cfe2, tint: 0x6f9be6 }), w, d, x, z));
+      t.fins = t.def.map(() => parts.alloc(4, COL.steel));
+      t.nLedge = Math.floor(t.share / 10); t.ledge = parts.alloc(t.nLedge, COL.steelLight);
+      t.caps = t.def.slice(1).map(([x, z, w, d], i) => {
+        const g = new THREE.Group(), slab = new THREE.Mesh(unitBox, roofMat);
+        slab.scale.set(w + 0.24, 0.14, d + 0.24); slab.castShadow = true;
+        g.add(slab);
+        if (i === 0) dish(g, 0, 0.14, 0, 0.6); else { mast(g, 0, 0.14, 0, 1.3); mast(g, 0.3, 0.14, 0.4, 0.8); }
+        g.position.set(x, 0, z);
+        t.group.add(g);
+        return g;
+      });
+      const [mx, mz, mw, md] = t.def[0];
+      t.crown.position.set(mx, 0, mz);
+      rectCrown(t, mw, md, jobs, { antennas: 3, dish: t.cores === 1 });
+    },
+    resize(t, hh) {
+      t.def.forEach(([x, z, w, d, ratio], i) => {
+        const H = Math.max(0.02, hh * ratio);
+        t.core[i].scale.y = H;
+        corners(t, t.fins[i], w, d, H + (i ? 0.14 : CROWN_H), 0.2, x, z);
+        if (i) t.caps[i - 1].position.y = H;
+      });
+      const [mx, mz, mw, md] = t.def[0];
+      ledges(t, t.ledge, t.nLedge, mw + 0.34, md + 0.34, hh, mx, mz);
+    }
+  },
+  // a round stone tower that steps in every ten floors, with a painted spiral ramp and a ring of flags on top
+  babel: {
+    build(t, jobs) {
+      t.R0 = 1.85;
+      t.fp = { w: 3.8, d: 3.8 };
+      t.nTier = Math.max(1, Math.ceil(t.share / 10 - 1e-6));
+      t.tier = []; t.ring = [];
+      const ringMat = toon({ color: 0xf3ead6 });
+      for (let k = 0; k < t.nTier; k++) {
+        const r = t.R0 - 0.2 * k, bays = Math.round((2 * Math.PI * r) / 0.52);
+        const m = t.shaft(t.facade({ style: 2, round: 1, radius: r, bay: (2 * Math.PI * r) / bays, band: 1, color: 0xe9d7b4 }), r, r, 0, 0, unitCyl);
+        m.position.y = k * 4;
+        const ring = new THREE.Mesh(unitCyl, ringMat);
+        ring.scale.set(r + 0.3, 0.2, r + 0.3); ring.position.y = (k + 1) * 4 - 0.1; ring.castShadow = true; ring.visible = false;
+        t.group.add(ring);
+        t.tier.push(m); t.ring.push(ring);
+      }
+      // crown: a round sign drum with the text four times around, a dome and a ring of flags
+      const drum = new THREE.Mesh(unitCyl, signBandMat);
+      drum.scale.set(t.R0 + 0.06, CROWN_H, t.R0 + 0.06); drum.castShadow = true;
+      const signMat = makeSign(t);
+      t.signTex.wrapS = THREE.RepeatWrapping; t.signTex.repeat.set(4, 1);
+      const text = new THREE.Mesh(new THREE.CylinderGeometry(t.R0 + 0.11, t.R0 + 0.11, 1.4, 48, 1, true).translate(0, CROWN_H / 2, 0), signMat);
+      const deck = new THREE.Mesh(unitCyl, roofMat);
+      deck.scale.set(t.R0 + 0.26, 0.14, t.R0 + 0.26); deck.position.y = CROWN_H; deck.castShadow = true;
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2), toon({ color: 0xf3ead6 }));
+      dome.scale.set(t.R0 * 0.62, t.R0 * 0.5, t.R0 * 0.62); dome.position.y = CROWN_H + 0.14; dome.castShadow = true;
+      t.crown.add(drum, text, deck, dome);
+      const roofY = CROWN_H + 0.14, tip = roofY + t.R0 * 0.5;
+      mast(t.crown, 0, tip - 0.05, 0, 1.2);
+      addBeacon(t.crown, 0, tip + 1.2, 0, towers.indexOf(t) * 1.7);
+      // more languages, more flags
+      const FLAGS = [0xe0483e, 0x2d74d6, 0xf2b632, 0x369e4e, 0xb073da, 0xff8a5c, 0x25a58a, 0xf4f1e8];
+      const flagGeo = new THREE.BoxGeometry(0.34, 0.2, 0.02).translate(0.17, 0, 0);
+      for (let f = 0; f < t.flags; f++) {
+        const a = (f / t.flags) * Math.PI * 2 + 0.4, R = t.R0 + 0.1;
+        mast(t.crown, Math.cos(a) * R, roofY, Math.sin(a) * R, 0.9);
+        const flag = new THREE.Mesh(flagGeo, toon({ color: FLAGS[f % FLAGS.length] }));
+        flag.position.set(Math.cos(a) * R, roofY + 0.76, Math.sin(a) * R);
+        flag.rotation.y = -a + Math.PI / 2;
+        t.crown.add(flag);
+      }
+    },
+    resize(t, hh) {
+      for (let k = 0; k < t.nTier; k++) {
+        const th = Math.min(4, hh - k * 4);
+        t.tier[k].visible = th > 0.01;
+        if (th > 0.01) t.tier[k].scale.y = th;
+        t.ring[k].visible = hh > (k + 1) * 4 + 0.06;
+      }
+      const top = Math.min(t.nTier - 1, Math.max(0, Math.floor((hh - 0.001) / 4))), s = (t.R0 - 0.2 * top) / t.R0;
+      t.crown.scale.set(s, 1, s);
+    }
+  },
+  // stacked modules: the base game, then expansion packs bolted on, each a little out of line
+  stack: {
+    build(t, jobs) {
+      t.nMod = Math.max(1, Math.ceil(t.share / 10 - 1e-6));
+      t.fp = { w: TW + 0.4, d: TD + 0.4 };
+      t.off = [[0, 0], [0.26, -0.18], [-0.22, 0.2], [0.2, 0.22], [-0.24, -0.16], [0.18, 0.1], [-0.16, 0.2], [0.22, -0.2], [0, 0.16], [0.1, -0.1]];
+      t.mod = []; t.tag = [];
+      for (let k = 0; k < t.nMod; k++) {
+        const w = TW - (k % 2) * 0.34, d = TD - ((k + 1) % 2) * 0.22;
+        const m = t.shaft(t.facade({ style: 3, band: 0, w, d, color: k % 2 ? 0xf3cf93 : 0xefe5d2 }), w, d, t.off[k][0], t.off[k][1]);
+        m.position.y = k * 4;
+        m.userData.dims = [w, d];
+        t.mod.push(m);
+        // stencilled name of the module on two faces
+        const mat = stencil(k ? '+ DLC' : 'BASE GAME', 2.6, 0.62, 150, 'rgba(60,45,30,0.5)'), g = new THREE.Group();
+        const a = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.62), mat), b = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 0.55), mat);
+        a.position.set(t.off[k][0], 0, t.off[k][1] + d / 2 + 0.02);
+        b.rotation.y = -Math.PI / 2; b.position.set(t.off[k][0] - w / 2 - 0.02, 0, t.off[k][1]);
+        const c = a.clone(); c.rotation.y = Math.PI; c.position.z = t.off[k][1] - d / 2 - 0.02;
+        const e = b.clone(); e.rotation.y = Math.PI / 2; e.position.x = t.off[k][0] + w / 2 + 0.02;
+        g.add(a, b, c, e); g.visible = false;
+        t.group.add(g);
+        t.tag.push(g);
+      }
+      t.spine = new THREE.Mesh(unitBox, darkMat);
+      t.spine.scale.set(TW - 1.3, 1, TD - 1.3);
+      t.group.add(t.spine);
+      rectCrown(t, TW - 0.2, TD - 0.2, jobs, { tree: true, tank: true });
+    },
+    resize(t, hh) {
+      let top = 0;
+      for (let k = 0; k < t.nMod; k++) {
+        const mh = Math.min(4, hh - k * 4) - 0.16;
+        t.mod[k].visible = mh > 0.04;
+        if (mh > 0.04) { t.mod[k].scale.y = mh; top = k; }
+        t.tag[k].visible = mh > 1.5;
+        t.tag[k].position.y = k * 4 + Math.min(1.5, mh * 0.5);
+      }
+      t.spine.scale.y = hh;
+      t.crown.position.x = t.off[top][0]; t.crown.position.z = t.off[top][1];
+    }
+  }
+};
+
+// sky-bridges between neighbouring glass megatowers, wherever both are tall enough
+const skyLinks = [];
+function buildSkyLinks() {
+  const row = DISTRICTS.combo.towers.filter(o => o.series === 1).map(o => towerById[o.id]);
+  for (let i = 0; i + 1 < row.length; i++) for (let lv = 1; lv <= 5; lv++) {
+    if (Math.min(row[i].share, row[i + 1].share) < lv * 10 + 1) continue;
+    skyLinks.push({ a: row[i], b: row[i + 1], y: lv * 4 + 0.45, idx: parts.alloc(2, COL.cream) });
+  }
+}
+function stepSkyLinks() {
+  for (const l of skyLinks) {
+    if (Math.min(l.a.h, l.b.h) > l.y + 0.5) {
+      const x = (l.a.x + l.b.x) / 2, len = Math.abs(l.b.x - l.a.x) - TW + 0.2;
+      parts.put(l.idx, MID, x, l.y, l.a.z, len, 0.26, 1.1);
+      parts.put(l.idx + 1, MID, x, l.y + 0.45, l.a.z, len, 0.06, 1.2);
+    } else { parts.hide(l.idx); parts.hide(l.idx + 1); }
+  }
+}
+
+// ---------- district platforms and bridges at town level ----------
+const platMat = toon({ color: 0xece2cf }), skirtMat = toon({ color: CREAM_DARK });
+function platform(x0, x1, z0, z1, accent) {
+  const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, sx = x1 - x0, sz = z1 - z0;
+  scene.add(
+    box(sx, 0.5, sz, platMat, cx, -0.25, cz),
+    box(sx + 0.44, 0.16, sz + 0.44, toon({ color: accent }), cx, -0.12, cz),
+    box(sx - 1.0, 0.7, sz - 1.0, skirtMat, cx, -0.85, cz)
+  );
+}
+function bridge(ax, az, bx, bz) {
+  const len = Math.hypot(bx - ax, bz - az), g = new THREE.Group();
+  g.add(box(len, 0.14, 1.3, platMat, 0, -0.07, 0), box(len, 0.22, 0.08, skirtMat, 0, 0.11, 0.61), box(len, 0.22, 0.08, skirtMat, 0, 0.11, -0.61),
+        box(len, 0.34, 0.34, skirtMat, 0, -0.31, 0));
+  g.position.set((ax + bx) / 2, 0, (az + bz) / 2);
+  g.rotation.y = -Math.atan2(bz - az, bx - ax);
+  scene.add(g);
+}
+
+// ---------- the foundation: every game, in five tiers ----------
+const strata = [];
+const NEUTRAL = new THREE.Color(0xcfc9bd);
+function buildFoundation() {
+  let y = -0.32;
+  const widths = [16.7, 15.1, 13.9, 13.1, 12.7];
+  for (let k = 4; k >= 0; k--) {
+    const share = (100 * ALL.tiers[k]) / ALL.n, h = share * FLOOR, w = widths[k];
+    const mat = facadeMaterial({ color: TIER[k].wall, accent: TIER[k].color, band: 0, w, d: w, seed: 20 + k * 3.3, win: k === 4 ? 0 : 1 });
+    const mesh = new THREE.Mesh(unitBox, mat);
+    mesh.scale.set(w, h, w); mesh.position.y = y - h;
+    mesh.castShadow = mesh.receiveShadow = true;
+    mesh.userData.pick = { type: 'tier', k };
+    pickables.push(mesh);
+    const th = Math.min(0.16, h * 0.45);
+    const trimMat = toon({ color: TIER[k].color, emissive: TIER[k].color, emissiveIntensity: 0 });
+    const trim = box(w + 0.2, th, w + 0.2, trimMat, 0, y - th / 2, 0);
+    scene.add(mesh, trim);
+    strata[k] = { k, share, n: ALL.tiers[k], top: y, bottom: y - h, w, mesh, mat, trimMat, tierCol: new THREE.Color(TIER[k].wall), trimCol: new THREE.Color(TIER[k].color),
+      baseCol: new THREE.Color(TIER[k].wall), stencils: [], rev: 1, revTo: 1, glow: 0, glowTo: 0, dim: 0, dimTo: 0 };
+    y -= h;
+  }
+}
+// giant stencilled lettering
+function stencil(text, w, h, px, ink = 'rgba(255,255,255,0.86)') {
+  const tex = textTexture(1024, Math.round((1024 * h) / w), (g, cw, ch) => {
+    const lines = text.split('\n');
+    let size = Math.min(px, (ch / lines.length) * 0.98);
+    do { g.font = `900 ${size}px ${SIGN_FONT}`; size -= 4; } while (Math.max(...lines.map(ln => g.measureText(ln).width)) > cw * 0.95 && size > 24);
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = ink;
+    lines.forEach((ln, i) => g.fillText(ln, cw / 2, ch * ((i + 0.5) / lines.length) + size * 0.05));
+  });
+  return hideOutline(toon({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+}
+function buildStencils() {
+  const put = (k, text, w, h, px, yc) => {
+    const s = strata[k], mat = stencil(text, w, h, px), half = s.w / 2 + 0.03;
+    for (let f = 0; f < 4; f++) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+      m.rotation.y = (f * Math.PI) / 2;
+      m.position.set(Math.sin(m.rotation.y) * half, yc, Math.cos(m.rotation.y) * half);
+      m.receiveShadow = true;
+      scene.add(m);
+      s.stencils.push(m);
+    }
+  };
+  put(0, 'COMMON\n' + pct(strata[0].share), 13, 7.4, 250, strata[0].top - 5.2);
+  put(1, 'UNCOMMON  ' + pct(strata[1].share), 13, 2.6, 190, (strata[1].top + strata[1].bottom) / 2);
+  put(2, 'RARE  ' + pct(strata[2].share), 9, 1.5, 160, (strata[2].top + strata[2].bottom) / 2 - 0.06);
+  put(3, 'EPIC  ' + pct(strata[3].share), 3.6, 0.52, 120, (strata[3].top + strata[3].bottom) / 2 - 0.05);
+}
+// in the forecast game the tiers start unpainted and unlabelled, so they give nothing away
+function revealStrata(on, instant) {
+  for (const s of strata) {
+    s.revTo = on ? 1 : 0;
+    if (instant) s.rev = s.revTo;
+    for (const m of s.stencils) m.visible = on;
+  }
+}
+
+// ---------- the halo: how much of the difference in owners our three features explain ----------
+const halo = { group: new THREE.Group(), R: 25, target: 0.154, shown: 0.154, SEG: 256, RAD: 12 };
+function buildHalo() {
+  const g = halo.group;
+  g.position.set(1, 12, -40);
+  g.rotation.y = 0.5;
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(halo.R, 0.8, halo.RAD, 220), toon({ color: 0xe9dfce }));
+  ring.userData.pick = { type: 'halo' };
+  pickables.push(ring);
+  // a torus whose index runs along the ring, so a draw range shows a partial arc
+  const arcGeo = (tube, R) => {
+    const pos = [], idx = [], RS = halo.RAD, TS = halo.SEG;
+    for (let i = 0; i <= TS; i++) for (let j = 0; j <= RS; j++) {
+      const u = (i / TS) * Math.PI * 2, v = (j / RS) * Math.PI * 2, rr = R + tube * Math.cos(v);
+      pos.push(rr * Math.cos(u), rr * Math.sin(u), tube * Math.sin(v));
+    }
+    for (let i = 0; i < TS; i++) for (let j = 0; j < RS; j++) {
+      const a = i * (RS + 1) + j + 1, b = i * (RS + 1) + j, c = (i + 1) * (RS + 1) + j, d = (i + 1) * (RS + 1) + j + 1;
+      idx.push(a, b, d, b, c, d);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setIndex(idx);
+    return geo;
+  };
+  const arc = (tube, color, opacity, R = halo.R) => {
+    const m = new THREE.Mesh(arcGeo(tube, R), hideOutline(new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: opacity < 1, opacity })));
+    m.frustumCulled = false;
+    m.rotation.set(0, Math.PI, Math.PI / 2);
+    g.add(m);
+    return m;
+  };
+  halo.old = arc(1.0, 0x8fa3d8, 1);
+  halo.now = arc(1.16, 0xffc24a, 1);
+  halo.ghost = arc(0.3, 0xffffff, 0.9, halo.R + 2.5);
+  halo.old.geometry.setDrawRange(0, Math.round(0.055 * halo.SEG) * halo.RAD * 6);
+  halo.ghost.visible = false;
+  g.add(ring);
+  for (let i = 0; i < 4; i++) {
+    const a = Math.PI / 2 - (i * Math.PI) / 2;
+    const tick = box(0.5, 2.6, 0.5, steelMat, Math.cos(a) * halo.R, Math.sin(a) * halo.R, 0);
+    tick.rotation.z = a - Math.PI / 2;
+    g.add(tick);
+  }
+  scene.add(g);
+  setHalo(halo.shown);
+}
+const arcRange = v => Math.max(0, Math.round(v * halo.SEG)) * halo.RAD * 6;
+function setHalo(v) {
+  halo.shown = v;
+  halo.now.geometry.setDrawRange(0, arcRange(v));
+  halo.old.visible = v >= 0.054;
+}
+function setHaloGhost(v) {
+  halo.ghost.visible = v !== null;
+  if (v !== null) halo.ghost.geometry.setDrawRange(0, arcRange(v));
+}
+// world position of the point a fraction f of the way round the halo (clockwise from the top)
+function haloPoint(f, out, extra = 0) {
+  const a = Math.PI / 2 - f * Math.PI * 2;
+  out.set(Math.cos(a) * (halo.R + extra), Math.sin(a) * (halo.R + extra), 0);
+  return out.applyMatrix4(halo.group.matrixWorld);
+}
+
+// ---------- the far skyline in the haze: other megastructures, each with its own silhouette ----------
+function buildFar() {
+  const BASE = -60, boxes = [], cones = [], domes = [];
+  const at = (deg, R) => [Math.sin(deg * D2R) * R, Math.cos(deg * D2R) * R - 8];
+  const B = (x, y, z, w, h, d, ry = 0) => boxes.push([x, y, z, w, h, d, ry]);
+  // megaslabs: a shaft, a setback top and a lower wing
+  for (const [deg, R, w, h, d] of [[232, 150, 22, 120, 16], [262, 215, 18, 150, 18], [160, 205, 20, 135, 16], [128, 165, 24, 112, 18],
+    [72, 185, 20, 104, 16], [38, 215, 22, 132, 18], [318, 205, 20, 92, 16], [350, 170, 18, 84, 14], [288, 260, 30, 195, 22], [192, 290, 28, 205, 22]]) {
+    const [x, z] = at(deg, R), ry = deg * D2R, ox = Math.cos(ry) * w * 0.9, oz = -Math.sin(ry) * w * 0.9;
+    B(x, BASE, z, w, h - BASE, d, ry);
+    B(x, h, z, w * 0.55, h * 0.22, d * 0.6, ry);
+    B(x - ox, BASE, z - oz, w * 0.6, h * 0.55 - BASE, d * 0.8, ry);
+  }
+  // gates: twin shafts tied together by bridges, with a beam across the top
+  for (const [deg, R, h, gap, w] of [[207, 205, 150, 36, 14], [100, 230, 125, 30, 13], [335, 245, 140, 36, 14]]) {
+    const [x, z] = at(deg, R), ry = deg * D2R, cx = Math.cos(ry), cz = -Math.sin(ry);
+    for (const side of [-1, 1]) B(x + (side * cx * gap) / 2, BASE, z + (side * cz * gap) / 2, w, h - BASE, w, ry);
+    for (const f of [0.42, 0.68]) B(x, h * f, z, gap, 5, w * 0.6, ry);
+    B(x, h, z, gap + w * 1.6, 9, w * 1.2, ry);
+  }
+  // ziggurats: stepped arcologies the size of mountains
+  for (const [deg, R, w, h] of [[247, 235, 120, 120], [20, 250, 100, 100], [140, 255, 110, 110]]) {
+    const [x, z] = at(deg, R), ry = deg * D2R;
+    for (let k = 0; k < 5; k++) { const ww = w * (1 - k * 0.19); B(x, k ? (h * k) / 5 : BASE, z, ww, k ? h / 5 : h / 5 - BASE, ww, ry); }
+    cones.push([x, h, z, 3, 44]);
+  }
+  // sister towns: a pillar, a deck and a handful of towers, like the one you are looking at
+  const rs = mulberry(4242);
+  for (const [deg, R, y, r] of [[180, 165, 22, 20], [92, 170, 30, 18], [300, 175, 16, 22], [226, 250, 40, 24]]) {
+    const [x, z] = at(deg, R);
+    B(x, BASE, z, r * 0.7, y - BASE - 3, r * 0.7);
+    B(x, y - 3, z, r * 2, 3, r * 2);
+    for (let k = 0; k < 7; k++) { const a = rs() * 6.283, q = rs() * r * 0.75, w = 3 + rs() * 3; B(x + Math.cos(a) * q, y, z + Math.sin(a) * q, w, 6 + rs() * rs() * 46, w); }
+  }
+  // needles
+  for (const [deg, R, r, h] of [[215, 270, 6, 300], [150, 150, 4, 170], [275, 170, 4, 190], [55, 240, 5, 240], [330, 150, 3.5, 150]]) {
+    const [x, z] = at(deg, R);
+    cones.push([x, BASE, z, r, h - BASE]);
+  }
+  // domes on a drum
+  for (const [deg, R, r] of [[195, 228, 46], [60, 280, 54], [280, 292, 50]]) {
+    const [x, z] = at(deg, R);
+    domes.push([x, 14, z, r]);
+    B(x, BASE, z, r * 1.7, 14 - BASE, r * 1.7, deg * D2R);
+  }
+
+  const yAxis = new THREE.Vector3(0, 1, 0);
+  const bm = new THREE.InstancedMesh(unitBox, hideOutline(facadeMaterial({ color: 0xc6cedc, band: 0, w: 400, d: 400, seed: 91, win: 0.35 })), boxes.length);
+  boxes.forEach(([x, y, z, w, h, d, ry], i) => { _m4.compose(_v3.set(x, y, z), _q4.setFromAxisAngle(yAxis, ry), _s3.set(w, h, d)); bm.setMatrixAt(i, _m4); });
+  const plain = hideOutline(toon({ color: 0xc9d0dd }));
+  const cm = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 8).translate(0, 0.5, 0), plain, cones.length);
+  cones.forEach(([x, y, z, r, h], i) => { _m4.compose(_v3.set(x, y, z), QID, _s3.set(r, h, r)); cm.setMatrixAt(i, _m4); });
+  const dm = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI / 2), plain, domes.length);
+  domes.forEach(([x, y, z, r], i) => { _m4.compose(_v3.set(x, y, z), QID, _s3.set(r, r * 0.8, r)); dm.setMatrixAt(i, _m4); });
+  for (const m of [bm, cm, dm]) { m.frustumCulled = false; scene.add(m); }
+  // two distant rings, tilted
+  for (const [x, y, z, R, ry, rx] of [[-210, 70, -250, 70, 0.9, 0.3], [250, 40, -160, 46, -0.7, -0.2]]) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(R, 2.2, 8, 120), plain);
+    ring.position.set(x, y, z); ring.rotation.set(rx, ry, 0);
+    scene.add(ring);
+  }
+}
+
+// ---------- small craft circling the towers, and searchlights at night ----------
+const craft = { mesh: null, list: [] };
+function buildCraft() {
+  const n = isPhone() ? 10 : 18, rs = mulberry(808);
+  craft.mesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.26, 0).scale(1, 0.5, 2.4), hideOutline(new THREE.MeshBasicMaterial({ color: 0xffffff })), n);
+  craft.mesh.frustumCulled = false;
+  for (let i = 0; i < n; i++) craft.list.push({ cx: -4 + (rs() - 0.5) * 26, cz: -14 + (rs() - 0.5) * 18, r: 7 + rs() * 22, y: 5 + rs() * 28, sp: (0.05 + rs() * 0.08) * (rs() > 0.5 ? 1 : -1), ph: rs() * 6.283 });
+  scene.add(craft.mesh);
+}
+const craftDummy = new THREE.Object3D();
+function stepCraft(t) {
+  craft.list.forEach((c, i) => {
+    const a = c.ph + t * c.sp;
+    craftDummy.position.set(c.cx + Math.cos(a) * c.r, c.y + Math.sin(a * 2.3) * 0.6, c.cz + Math.sin(a) * c.r * 0.7);
+    craftDummy.rotation.y = -a + (c.sp > 0 ? 0 : Math.PI);
+    craftDummy.updateMatrix();
+    craft.mesh.setMatrixAt(i, craftDummy.matrix);
+  });
+  craft.mesh.instanceMatrix.needsUpdate = true;
+}
+const beams = [];
+const beamMat = hideOutline(new THREE.ShaderMaterial({
+  uniforms: { uNight: U.night, uColor: { value: new THREE.Color(0xcfe0ff) } },
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: 'uniform float uNight; uniform vec3 uColor; varying vec2 vUv; void main(){ gl_FragColor = vec4(uColor, pow(clamp(vUv.y, 0.0, 1.0), 1.6) * 0.34 * uNight); }'
+}));
+function searchlight(t, phase, tilt) {
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(4.2, 56, 24, 1, true).rotateX(Math.PI).translate(0, 28, 0), beamMat);
+  const g = new THREE.Group();
+  cone.rotation.z = tilt;
+  g.add(cone);
+  g.position.y = CROWN_H + 1.7;
+  g.userData = { phase };
+  t.crown.add(g);
+  beams.push(g);
+}
+
+// ---------- assemble ----------
+function buildMega(jobs) {
+  parts = new Pool(900);
+  buildFoundation();
+  for (const id of Object.keys(DISTRICTS)) for (const o of DISTRICTS[id].towers) new Tower(o, id);
+  for (const t of towers) t.style.build(t, jobs);
+  buildSkyLinks();
+  searchlight(towerById.c11_3, 0, 0.42);
+  searchlight(towerById.c11_2, 2.1, -0.5);
+  searchlight(towerById.dlc1, 4.2, 0.46);
+
+  // the shafts go on down through the platforms into the clouds
+  const sub = new THREE.InstancedMesh(unitBox, hideOutline(facadeMaterial({ color: 0xd9cdb8, band: 0, w: TW - 0.8, d: TD - 0.8, seed: 55, win: 0.6 })), towers.length);
+  const yAxis = new THREE.Vector3(0, 1, 0);
+  towers.forEach((t, i) => {
+    _m4.compose(_v3.set(t.x, -62.4, t.z), _q4.setFromAxisAngle(yAxis, (t.rotY || 0) * D2R), _s3.set(TW - 0.8, 62, TD - 0.8));
+    sub.setMatrixAt(i, _m4);
+  });
+  sub.frustumCulled = false; sub.castShadow = sub.receiveShadow = true;
+  scene.add(sub);
+
+  // megatrusses: ties and diagonals between neighbouring shafts, below the platforms
+  const pairs = [];
+  for (let i = 0; i < towers.length; i++) for (let j = i + 1; j < towers.length; j++) {
+    const a = towers[i], b = towers[j], dist = Math.hypot(a.x - b.x, a.z - b.z);
+    if (dist < 5.7) pairs.push([a, b, dist]);
+  }
+  const truss = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), hideOutline(toon({ color: 0xcfc2ab })), pairs.length * 5);
+  const eul = new THREE.Euler();
+  let ti = 0;
+  for (const [a, b, dist] of pairs) {
+    const mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2, yaw = -Math.atan2(b.z - a.z, b.x - a.x);
+    for (const y of [-5.5, -15.5, -25.5]) {
+      _m4.compose(_v3.set(mx, y, mz), _q4.setFromEuler(eul.set(0, yaw, 0, 'YXZ')), _s3.set(dist, 0.5, 0.5));
+      truss.setMatrixAt(ti++, _m4);
+    }
+    for (const [y, tilt] of [[-10.5, 1], [-20.5, -1]]) {
+      _m4.compose(_v3.set(mx, y, mz), _q4.setFromEuler(eul.set(0, yaw, Math.atan2(10, dist) * tilt, 'YXZ')), _s3.set(Math.hypot(dist, 10), 0.34, 0.34));
+      truss.setMatrixAt(ti++, _m4);
+    }
+  }
+  truss.frustumCulled = false; truss.castShadow = truss.receiveShadow = true;
+  scene.add(truss);
+
+  platform(12.4, 18.8, -17.2, -0.8, DISTRICTS.systems.accent);
+  platform(12.4, 18.8, 0.2, 11.2, DISTRICTS.dlc.accent);
+  platform(-18.8, -12.4, -16.7, 4.7, DISTRICTS.languages.accent);
+  platform(-18.8, -12.4, 5.9, 11.9, DISTRICTS.yours.accent);
+  platform(-10.6, 10.6, -23.4, -12.2, DISTRICTS.combo.accent);
+  bridge(5.8, -3, 12.4, -3); bridge(5.8, 3, 12.4, 3);
+  bridge(-5.8, -3, -12.4, -3); bridge(-5.8, 4, -12.4, 7.5);
+  bridge(-3, -5.8, -3, -12.2); bridge(3, -5.8, 3, -12.2);
+  bridge(12.4, -0.8, 12.4, 0.2); bridge(18.4, -0.8, 18.4, 0.2);
+
+  // small jacarandas and lamps on the platforms
+  [[13.3, -16.3, 0.62], [13.3, -1.7, 0.6], [13.3, 10.3, 0.62], [-13.3, -15.8, 0.62], [-13.3, 3.8, 0.6], [-13.3, 6.8, 0.56],
+   [-9.7, -13.1, 0.66], [9.7, -13.1, 0.66], [0, -17.8, 0.7], [-9.7, -22.5, 0.6], [9.7, -22.5, 0.6]]
+    .forEach(([x, z, s], i) => jacaranda(x, z, 0, s, 71 + i, { ground: 0.02 }));
+  jobs.push(lamp(12.9, -9, 0), lamp(12.9, 5.5, 0), lamp(-12.9, -6, 180), lamp(-5, -12.7, 90), lamp(5, -12.7, 90), lamp(-12.9, 8.8, 180));
+
+  // hanging gardens: flowering bushes along the two widest ledges of the foundation
+  let bi = 0;
+  for (const k of [1, 0]) {
+    const s = strata[k], inner = strata[k + 1].w / 2, mid = (inner + s.w / 2) / 2, step = k ? 1.5 : 1.9;
+    for (let side = 0; side < 4; side++) for (let u = -mid; u < mid; u += step) {
+      const along = u + (bi % 3) * 0.22, x = side === 0 ? along : side === 1 ? mid : side === 2 ? -along : -mid, z = side === 0 ? mid : side === 1 ? -along : side === 2 ? -mid : along;
+      bush(x, s.top, z, 0.26 + ((bi * 7) % 5) * 0.03, 500 + bi++);
+    }
+  }
+
+  buildStencils();
+  buildHalo();
+  buildFar();
+  buildCraft();
+}
+// raise every tower to its height and write its sign
+function finishMega() {
+  for (const t of towers) { t.setHeight(t.goal); t.drawSign(t.share); }
+  stepSkyLinks();
+  parts.flush();
+  halo.group.updateMatrixWorld(true);
+}
+
+onTime.push(L => {
+  for (const s of strata) s.trimMat.emissiveIntensity = L.night * 0.9 * s.rev;
+});
+function stepMega(dt, t) {
+  let moving = false;
+  for (const tw of towers) {
+    if (tw.anim) {
+      const a = tw.anim;
+      a.t += dt;
+      const k = clamp01(a.t / a.dur), h = lerp(a.from, a.to, easeOut(k));
+      tw.setHeight(h); tw.drawSign(h / FLOOR);
+      if (k >= 1) tw.anim = null;
+      moving = true;
+    }
+    tw.glow += (tw.glowTo - tw.glow) * Math.min(1, dt * 8);
+    tw.dim += (tw.dimTo - tw.dim) * Math.min(1, dt * 6);
+    const gl = tw.glow * (0.75 + 0.25 * Math.sin(t * 4));
+    for (const m of tw.mats) { m.userData.fac.glow.value = gl; m.color.copy(m.userData.baseCol).lerp(DIM_COL, tw.dim * 0.55); }
+    if (tw.crane) tw.crane.rotation.y = t * 0.25;
+  }
+  if (moving) stepSkyLinks();
+  parts.flush();
+  for (const s of strata) {
+    s.glow += (s.glowTo - s.glow) * Math.min(1, dt * 8);
+    s.dim += (s.dimTo - s.dim) * Math.min(1, dt * 6);
+    if (Math.abs(s.revTo - s.rev) > 0.001) {
+      s.rev += (s.revTo - s.rev) * Math.min(1, dt * 2.5);
+      s.baseCol.copy(NEUTRAL).lerp(s.tierCol, s.rev);
+      s.trimMat.color.copy(NEUTRAL).lerp(s.trimCol, s.rev);
+      s.trimMat.emissive.copy(s.trimMat.color);
+      s.trimMat.emissiveIntensity = U.night.value * 0.9 * s.rev;
+    }
+    s.mat.userData.fac.glow.value = s.glow * (0.75 + 0.25 * Math.sin(t * 4));
+    s.mat.color.copy(s.baseCol).lerp(DIM_COL, s.dim * 0.5);
+  }
+  for (const b of beacons) b.visible = Math.sin(t * 2.6 + b.userData.phase) > 0.1;
+  for (const b of beams) { b.visible = U.night.value > 0.03; b.rotation.y = t * 0.22 + b.userData.phase; }
+  if (Math.abs(halo.target - halo.shown) > 0.0005) setHalo(halo.shown + (halo.target - halo.shown) * Math.min(1, dt * 1.8));
+  if (!reduceMotion) stepCraft(t);
+}
+
+// ===================================================================== 07 tour: cards, labels and links to the structures
+// Every chart row in a card is linked to one structure in the scene (a tower, a foundation tier or the halo).
+// Hovering either side highlights the other; clicking a row flies the camera to its structure.
+const tourEl = $('tour'), overlayEl = $('overlay');
+const hexCss = n => '#' + new THREE.Color(n).getHexString();
+const LINKS = {};          // id -> { kind, label el, anchor(out), stop index, color }
+let stopIdx = -1, hotId = null, selId = null, pinsShown = false;
+let conceal = null;        // in the forecast game: id -> true for a label that would give an answer away
+const build = { s: 0, l: 0, d: 0 };
+const camOf = s => (typeof s.cam === 'function' ? s.cam() : s.cam);
+
+function addLink(id, o) {
+  const el = document.createElement('div');
+  el.className = 'tl';
+  el.style.setProperty('--c', o.color);
+  overlayEl.appendChild(el);
+  LINKS[id] = { id, el, ...o };
+  return LINKS[id];
+}
+function towerLabel(t) {
+  return `<small>${t.editable ? yourLabel() : t.label}</small><b data-live="${t.id}">${pct(t.h / FLOOR)}</b><small>of ${fmt(t.n)} games</small>`;
+}
+const yourLabel = () => `${SYS_L[build.s]} · ${LANG_L[build.l].replace(' languages', ' lang.').replace(' language', ' lang.')} · ${DLC_L[build.d]}`;
+
+// ---------- the stops ----------
+const bars = (rows, max) => `<div class="rows">${rows.map(r => r.series ? `<p class="series">${r.series}</p>` :
+  `<button type="button" class="row" data-link="${r.id}" style="--c:${r.color}">
+     <span class="lab"><i></i>${r.label}</span><span class="bar"><u data-w="${((100 * r.v) / max).toFixed(1)}"></u></span>
+     <span class="val" data-val="${r.id}">${pct(r.v)}</span>${r.sub ? `<small>${r.sub}</small>` : ''}</button>`).join('')}</div>`;
+const towerRows = (id, labelOf) => DISTRICTS[id].towers.map(o => ({ id: o.id, label: labelOf ? labelOf(o) : o.label, v: o.share, color: hexCss(DISTRICTS[id].accent), sub: labelOf ? '' : `${fmt(o.n)} games` }));
+const HINT = '<p class="hint">Tap a row to fly to its tower. Tap a tower to find its row.</p>';
+
+const STOPS = [
+  {
+    id: 'welcome', sprite: 'floppy', tag: 'The data', title: 'One floor is one percent',
+    pin: () => [0, 6.4, 0], cam: () => HOME, links: [],
+    html: () => `<p>Our data is the Steam Games Dataset 2025 from Kaggle. After setting aside 8,507 games, almost all of them because they have no owner estimate, <b>81,117 games</b> remain.</p>
+      <div class="key"><span class="ruler"></span><span>Everywhere in this city, <b>one floor is one percent</b>. A tower's height is the share of games in that group with 100,000 or more owners. A ledge marks every 10 floors.</span></div>
+      <p class="note">The old town in the middle sits on a foundation that holds every game. The next stop looks at what it is made of.</p>`
+  },
+  {
+    id: 'tiers', sprite: 'gem', tag: 'Loot tiers', title: 'Only 9.4% of games are Rare or better',
+    pin: () => [8.7, -7.5, 8.7], cam: { t: [0, -13, 0], az: 40, el: -1, dist: 86 }, sea: -24,
+    links: [4, 3, 2, 1, 0].map(k => 'tier' + k),
+    html: () => `<p>The foundation is 100 floors deep: all 81,117 games, sorted into five owner tiers. The town stands on a thin gold line.</p>
+      ${bars([4, 3, 2, 1, 0].map(k => ({ id: 'tier' + k, label: TIER[k].name, v: strata[k].share, color: hexCss(TIER[k].color), sub: `${TIER[k].range} · ${fmt(strata[k].n)} games` })), 100)}
+      <p class="note"><b>Rare or better</b> means 100,000 owners or more. That is the top 9.4 floors; the other 90.6 are Common and Uncommon.</p>`
+  },
+  {
+    id: 'systems', sprite: 'boot', tag: 'Power-up 1', title: 'Run on more systems', district: 'systems',
+    pin: () => [15.6, 12, -9], cam: { t: [15.6, 3.6, -9], az: 52, el: 13, dist: 31 },
+    look: 'Each glass shaft is one operating system: one, two, then three shafts bundled together.',
+    html: () => `<p>Share of games reaching 100,000 owners, by how many operating systems they run on.</p>
+      ${bars(towerRows('systems'), 30)}${HINT}
+      <p class="note">Games on Windows, macOS and Linux do more than twice as well as games on one system.</p>`
+  },
+  {
+    id: 'languages', sprite: 'scroll', tag: 'Power-up 2', title: 'Speak more languages', district: 'languages',
+    pin: () => [-15.6, 14.5, -6], cam: { t: [-15.6, 4.6, -6], az: 26, el: 19, dist: 36 },
+    look: 'Round stone towers, like Babel. Count the flags on each roof: more languages, more flags.',
+    html: () => `<p>Share reaching 100,000 owners, by number of supported languages. The big jump comes at six.</p>
+      ${bars(towerRows('languages'), 30)}${HINT}`
+  },
+  {
+    id: 'dlc', sprite: 'chest', tag: 'Power-up 3', title: 'Add DLC', district: 'dlc',
+    pin: () => [15.6, 15.5, 5.5], cam: { t: [15.6, 5.4, 5.5], az: 60, el: 12, dist: 31 },
+    look: 'The bottom block is the base game. Every block bolted on top is an expansion: ten more floors.',
+    html: () => `<p>Games with DLC reach 100,000 owners about four and a half times as often.</p>
+      ${bars(towerRows('dlc'), 30)}${HINT}
+      <p class="note">Cause and effect can run both ways: studios tend to make DLC for games that already sell.</p>`
+  },
+  {
+    id: 'combo', sprite: 'bolt', tag: 'Combo', title: 'Stack the power-ups', district: 'combo',
+    pin: () => [0, 25, -17.5], cam: { t: [0, 15.5, -18], az: 22, el: 2, dist: 80 },
+    look: 'Front row: plain housing blocks. Back row: braced glass megatowers, joined by sky-bridges every ten floors.',
+    html: () => `<p>One-system games, by number of DLC. Front row: one language. Back row: 11 or more. Together they build the tallest tower in town.</p>
+      ${bars([{ series: 'Front row · 1 language' }].concat(towerRows('combo', o => o.short).slice(0, 4), [{ series: 'Back row · 11+ languages' }], towerRows('combo', o => o.short).slice(4)), 80)}${HINT}`
+  },
+  {
+    id: 'halo', sprite: 'magnifier', tag: 'Plot twist', title: 'The halo: how much do we explain?',
+    pin: () => haloPoint(0.02, new THREE.Vector3(), 2).toArray(), cam: { t: [1, 16, -34], az: 28, el: 2, dist: 104 },
+    links: ['halo_old', 'halo_now'],
+    html: () => `<p>The ring is everything that makes one game outsell another. The lit arc is the part our three power-ups explain.</p>
+      ${bars([{ id: 'halo_old', label: 'With “0 – 0” games', v: 5.5, color: '#8fa3d8', sub: 'the models in our report: more languages look like fewer owners' },
+              { id: 'halo_now', label: 'Without them', v: 15.4, color: '#e0a21c', sub: 'our re-run for this page: more languages go with more owners' }], 100)}
+      <p class="note">The regression models in our report keep the games whose owner estimate is “0 – 0” and count them as zero owners. Leaving them out, as the report's charts do, nearly triples what the best model explains. The dark part of the ring is the game itself: genre, quality, price, marketing and luck.</p>`
+  },
+  {
+    id: 'yours', sprite: 'hammer', tag: 'Your turn', title: 'Build your own tower', district: 'yours', keepHeight: true,
+    pin: () => [-15.6, towerById.yours.h + 6.5, 8.8], cam: () => yourCam(),
+    html: () => `<p class="note">Pick a build. The tower rises to the share of real games with that build that reached 100,000 owners.</p>
+      <form class="opts" id="opts">
+        ${[['sys', 'Systems', ['1', '2', '3'], build.s], ['lang', 'Languages', ['1', '2–5', '6–10', '11+'], build.l], ['dlc', 'DLC', ['0', '1', '2–5', '6+'], build.d]].map(([name, legend, opts, cur]) =>
+          `<fieldset><legend>${legend}</legend><div class="choices">${opts.map((o, i) =>
+            `<input type="radio" name="${name}" id="${name}-${i}" value="${i}" ${i === cur ? 'checked' : ''}><label for="${name}-${i}">${o}</label>`).join('')}</div></fieldset>`).join('')}
+      </form>
+      <div class="result" aria-live="polite"><span class="big" data-val="yours"></span><span class="txt" id="yourTxt"></span></div>
+      <p class="warn" id="yourWarn" hidden></p>
+      <div class="picks"><button type="button" id="pickCommon">Most common build</button><button type="button" id="pickBest">Best odds</button></div>`
+  },
+  {
+    id: 'results', sprite: 'trophy', tag: 'Results', title: 'What the town says',
+    pin: () => [-4, 4.2, 2], cam: () => HOME, links: [],
+    html: () => `<ul class="points"><li>Being easy to reach goes with reaching more players: more systems, more languages.</li>
+      <li>DLC goes with reach too, though popular games also tend to get more DLC.</li>
+      <li>Together these features explain only a small part of the differences: 5.5% in our report's models, about 15% once the “0 – 0” games are left out. The rest is the game itself.</li></ul>
+      <p class="note">Want every number? Read <a href="../report/Group_Project_1111_1013.pdf" target="_blank" rel="noopener">our report (PDF)</a>, <a href="../report/Group_Project_1111_1013.html" target="_blank" rel="noopener">the report with its R code</a> or <a href="../steam-pixel-story/" target="_blank" rel="noopener">the pixel story</a>.</p>`
+  }
+];
+function yourCam() {
+  const h = towerById.yours.goal;
+  return { t: [-15.6, h * 0.52 + 2, 8.8], az: 20, el: 8, dist: THREE.MathUtils.clamp(h * 1.7 + 24, 32, 88) };
+}
+const stopOf = id => STOPS.findIndex(s => s.links && s.links.includes(id));
+
+// ---------- pins ----------
+const pinEls = [];
+function buildTourUI() {
+  for (const t of towers) addLink(t.id, { kind: 'tower', tower: t, color: hexCss(t.accent), anchor: out => t.anchor(out) });
+  for (const s of strata) {
+    const l = addLink('tier' + s.k, { kind: 'tier', tier: s, color: hexCss(TIER[s.k].color), anchor: out => { const c = s.w / 2 + 0.4, sx = s.k === 4 || s.k === 1 ? -1 : 1, sz = s.k === 3 ? -1 : 1; return out.set(sx * c, Math.max((s.top + s.bottom) / 2, s.top - 6), sz * c); } });
+    l.el.innerHTML = `<small>${TIER[s.k].name} · ${TIER[s.k].range}</small><b>${pct(s.share)}</b><small>${fmt(s.n)} games</small>`;
+  }
+  addLink('halo_old', { kind: 'halo', color: '#8fa3d8', anchor: out => haloPoint(0.055, out, 3) }).el.innerHTML = '<small>with “0 – 0” games</small><b>5.5%</b><small>explained</small>';
+  addLink('halo_now', { kind: 'halo', color: '#e0a21c', anchor: out => haloPoint(halo.shown, out, 3) }).el.innerHTML = '<small>without them</small><b data-live="halo">15.4%</b><small>explained</small>';
+  for (const s of STOPS) if (s.district) s.links = DISTRICTS[s.district].towers.map(o => o.id);
+  for (const t of towers) LINKS[t.id].el.innerHTML = towerLabel(t);
+
+  STOPS.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'pin'; b.style.opacity = '0';
+    b.setAttribute('aria-label', `Stop ${i + 1}: ${s.title}`);
+    b.innerHTML = `<span class="pin-bob"><img class="sprite" src="${SPRITES[s.sprite]}" alt="" width="26" height="26"></span><span class="num">${i + 1}</span><span class="tag">${s.tag}</span>`;
+    b.addEventListener('click', () => openStop(i));
+    overlayEl.appendChild(b);
+    pinEls.push(b);
+  });
+}
+
+// ---------- highlight state ----------
+function refreshFocus() {
+  const stop = STOPS[stopIdx], active = stop && stop.links.length ? new Set(stop.links) : null;
+  for (const t of towers) {
+    const on = hotId === t.id || selId === t.id;
+    t.glowTo = on ? 1 : 0;
+    t.dimTo = active && !active.has(t.id) ? 1 : (selId || hotId) && active && active.has(selId || hotId) && !on ? 0.45 : 0;
+  }
+  for (const s of strata) {
+    const id = 'tier' + s.k, on = hotId === id || selId === id;
+    s.glowTo = on ? 1 : 0;
+    s.dimTo = (selId || hotId || '').startsWith('tier') && !on ? 0.6 : 0;
+  }
+  for (const id in LINKS) {
+    const l = LINKS[id], shown = !(conceal && conceal(id)), on = (hotId === id || selId === id) && shown;
+    l.el.classList.toggle('on', !!(active && active.has(id)) && shown);
+    l.el.classList.toggle('compact', !!(active && active.size > 4));
+    l.el.classList.toggle('hot', on);
+  }
+  tourEl.querySelectorAll('.row').forEach(r => {
+    r.classList.toggle('hot', r.dataset.link === hotId);
+    r.classList.toggle('sel', r.dataset.link === selId);
+  });
+}
+function setHot(id) { if (hotId !== id) { hotId = id; refreshFocus(); } }
+
+// ---------- opening a stop ----------
+// o: select (a link to select and fly to), and for the forecast game: force, keep (towers that stay as they are),
+// banner, eyebrow, dots, cam, next { label, fn } and onClose
+function openStop(i, o = {}) {
+  const s = STOPS[i], first = stopIdx !== i || !!o.force, playing = mode === 'play';
+  if (!playing && mode !== 'tour' && mode !== 'roam') { setMode('roam'); }
+  stopIdx = i; selId = o.select || null; hotId = null;
+  seaState.target = s.sea || 0;
+  const cam = o.cam || camOf(s);
+  if (o.select && LINKS[o.select] && LINKS[o.select].kind === 'tower') flyToTower(LINKS[o.select].tower, cam); else flyToView(cam, 1.9);
+  setShift('card');
+  controls.autoRotate = false; $('spin').setAttribute('aria-pressed', 'false');
+  if (first && s.district && !s.keepHeight) DISTRICTS[s.district].towers.forEach((d, j) => {
+    if (!(o.keep && o.keep.has(d.id))) towerById[d.id].grow(d.share * FLOOR, 1.5, 0.35 + j * 0.14, 0);
+  });
+  if (first && s.id === 'halo') {
+    halo.target = 0.055;
+    if (halo.shown > 0.055) setHalo(0.055);
+    setTimeout(() => { if (stopIdx === i) halo.target = 0.154; }, 1500);
+  }
+  if (s.id !== 'halo' && !playing) halo.target = 0.154;
+  if (!playing) noteVisit(i);
+
+  const dots = o.dots || STOPS.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('');
+  tourEl.innerHTML = `<div class="top"><img class="sprite" src="${SPRITES[s.sprite]}" alt="" width="44" height="44">
+      <div><p class="eyebrow">${o.eyebrow || `Stop ${i + 1} of ${STOPS.length} · ${s.tag}`}</p><h2>${s.title}</h2></div>
+      <button type="button" class="close" aria-label="${o.onClose ? 'Quit to the menu' : 'Close the tour'}">×</button></div>
+    ${o.banner || ''}${s.look ? `<p class="look"><i aria-hidden="true"></i><span>${s.look}</span></p>` : ''}${s.html()}
+    <div class="nav">${o.next ? '' : `<button type="button" class="prev" ${i === 0 ? 'disabled' : ''}>Back</button>`}
+      <span class="dots" aria-hidden="true">${dots}</span>
+      <button type="button" class="next">${o.next ? o.next.label : i === STOPS.length - 1 ? 'Finish' : 'Next'}</button></div>`;
+  tourEl.hidden = false;
+  if (first) { tourEl.scrollTop = 0; tourEl.style.animation = 'none'; void tourEl.offsetWidth; tourEl.style.animation = ''; }
+  tourEl.querySelector('.close').onclick = o.onClose || closeTour;
+  const prev = tourEl.querySelector('.prev');
+  if (prev) prev.onclick = () => i > 0 && openStop(i - 1);
+  tourEl.querySelector('.next').onclick = o.next ? o.next.fn : () => (i < STOPS.length - 1 ? openStop(i + 1) : closeTour());
+  // bars fill as the towers rise
+  tourEl.querySelectorAll('.row').forEach((row, j) => {
+    const u = row.querySelector('u'), id = row.dataset.link;
+    if (first && !reduceMotion) { u.style.transition = `width 1.5s cubic-bezier(.2,.8,.2,1) ${0.35 + j * 0.14}s`; requestAnimationFrame(() => { u.style.width = u.dataset.w + '%'; }); }
+    else u.style.width = u.dataset.w + '%';
+    row.addEventListener('pointerenter', () => setHot(id));
+    row.addEventListener('pointerleave', () => setHot(null));
+    row.addEventListener('focus', () => setHot(id));
+    row.addEventListener('blur', () => setHot(null));
+    row.addEventListener('click', () => selectLink(id));
+  });
+  if (s.id === 'yours') wireBuilder();
+  for (const t of towers) t.liveText = null;      // make the next frame refresh every live number in the new card
+  pinEls.forEach((p, k) => p.classList.toggle('active', k === i));
+  refreshFocus();
+}
+const closeTour = () => setMode('roam');
+// a row was clicked (or a structure was clicked in the scene): select it and move the camera to it
+function selectLink(id) {
+  const l = LINKS[id];
+  if (!l || mode === 'menu') return;
+  const i = stopOf(id);
+  // in the forecast game only what the current mission has already revealed can be inspected
+  if (mode === 'play' && (game.phase !== 'reveal' || i !== stopIdx || (conceal && conceal(id)))) return;
+  if (i >= 0 && i !== stopIdx) { openStop(i, { select: id }); return; }
+  selId = selId === id ? null : id;
+  const s = STOPS[stopIdx], cam = s ? camOf(s) : HOME;
+  if (!selId) flyToView(cam, 1.2);
+  else if (l.kind === 'tower') flyToTower(l.tower, cam);
+  else if (l.kind === 'tier') {
+    const st = l.tier, mid = Math.max((st.top + st.bottom) / 2, st.top - 6);
+    flyToView({ t: [0, mid, 0], az: cam.az, el: 2, dist: THREE.MathUtils.clamp((st.top - st.bottom) * 2.4 + 26, 30, 74) }, 1.3);
+  } else flyToView(cam, 1.2);
+  refreshFocus();
+  const row = selId && tourEl.querySelector(`.row[data-link="${selId}"]`);
+  if (row) row.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+}
+function flyToTower(t, cam) {
+  flyToView({ t: [t.x, Math.max(2.2, t.goal * 0.55 + 1), t.z], az: cam.az, el: Math.max(6, cam.el), dist: THREE.MathUtils.clamp(t.goal * 1.5 + 17, 19, 70) }, 1.3);
+}
+
+// ---------- build-your-own tower ----------
+let bestBuild = null;
+function wireBuilder() {
+  if (!bestBuild) {
+    let top = -1;
+    for (let s = 0; s < 3; s++) for (let l = 0; l < 4; l++) for (let d = 0; d < 4; d++) {
+      const c = CELLS[s][l][d], n = c[0] + c[1] + c[2] + c[3] + c[4], sh = (c[2] + c[3] + c[4]) / n;
+      if (n >= 50 && sh > top) { top = sh; bestBuild = [s, l, d]; }
+    }
+  }
+  const form = $('opts');
+  const apply = (fly) => {
+    const c = CELLS[build.s][build.l][build.d], n = c[0] + c[1] + c[2] + c[3] + c[4], share = (100 * (c[2] + c[3] + c[4])) / n;
+    const t = towerById.yours;
+    t.n = n; t.share = share;
+    t.grow(share * FLOOR, 1.1);
+    LINKS.yours.el.innerHTML = towerLabel(t);
+    const isBest = build.s === bestBuild[0] && build.l === bestBuild[1] && build.d === bestBuild[2];
+    $('yourTxt').textContent = `of the ${fmt(n)} real games with this build reached 100,000+ owners.` +
+      (build.s + build.l + build.d === 0 ? ' It is the most common build on Steam.' : isBest ? ' The best odds of any build with at least 50 games.' : '');
+    const warn = $('yourWarn');
+    warn.hidden = n >= 50;
+    warn.textContent = n < 50 ? `Only ${n} games have this build, so this number can swing a lot.` : '';
+    if (fly) {
+      flyToView(yourCam(), 1.2);
+      if (share >= 50) award('piercer');
+      if (isBest) award('best');
+    }
+  };
+  form.addEventListener('change', () => {
+    build.s = +form.elements.sys.value; build.l = +form.elements.lang.value; build.d = +form.elements.dlc.value;
+    apply(true);
+  });
+  form.addEventListener('submit', e => e.preventDefault());
+  const set = (s, l, d) => { form.elements.sys.value = s; form.elements.lang.value = l; form.elements.dlc.value = d; Object.assign(build, { s, l, d }); apply(true); };
+  $('pickCommon').onclick = () => set(0, 0, 0);
+  $('pickBest').onclick = () => set(...bestBuild);
+  apply(false);
+}
+
+// ---------- picking structures in the scene ----------
+const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
+let downAt = null;
+function pickAt(e) {
+  const r = canvas.getBoundingClientRect();
+  pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(pickables, false)[0];
+  if (!hit) return null;
+  const p = hit.object.userData.pick;
+  return p.type === 'tower' ? p.tower.id : p.type === 'tier' ? 'tier' + p.k : 'halo_now';
+}
+canvas.addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch' || e.buttons || mode === 'menu') return;
+  const id = pickAt(e);
+  canvas.classList.toggle('pointing', !!id);
+  setHot(id);
+});
+canvas.addEventListener('pointerleave', () => { canvas.classList.remove('pointing'); setHot(null); });
+canvas.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY, performance.now()]; });
+canvas.addEventListener('pointerup', e => {
+  if (!downAt) return;
+  const moved = Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]), quick = performance.now() - downAt[2] < 500;
+  downAt = null;
+  if (moved > 6 || !quick) return;
+  const id = pickAt(e);
+  if (id) selectLink(id);
+});
+
+// ---------- every frame: place pins and labels, keep live numbers in step with the towers ----------
+const proj = new THREE.Vector3();
+function place2D(el, world, scaleNear, align) {
+  proj.copy(world).project(camera);
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  const ok = proj.z < 1 && proj.z > -1 && Math.abs(proj.x) < 1.15 && Math.abs(proj.y) < 1.2;
+  const x = ((proj.x * 0.5 + 0.5) * w).toFixed(1), y = ((-proj.y * 0.5 + 0.5) * h).toFixed(1);
+  el.style.transform = scaleNear ? `translate(${x}px, ${y}px) scale(${scaleNear})` : `translate(${x}px, ${y}px) ${align || 'translate(-50%, -100%)'}`;
+  return ok;
+}
+const anchorV = new THREE.Vector3();
+function stepTour() {
+  const touring = stopIdx >= 0;
+  STOPS.forEach((s, i) => {
+    const el = pinEls[i];
+    if (!el) return;
+    anchorV.fromArray(s.pin());
+    const sc = THREE.MathUtils.clamp(46 / camera.position.distanceTo(anchorV), 0.6, 1.1);
+    const ok = place2D(el, anchorV, sc.toFixed(3));
+    const show = pinsShown && ok && (!touring || i === stopIdx);
+    el.style.opacity = show ? (touring ? '0.0' : '1') : '0';
+    el.style.pointerEvents = show && !touring ? 'auto' : 'none';
+  });
+  for (const id in LINKS) {
+    const l = LINKS[id];
+    const c = l.el.classList;
+    if (!c.contains('on') && !c.contains('hot') && !c.contains('pinned')) continue;
+    if (!place2D(l.el, l.anchor(anchorV), 0, l.align)) l.el.style.transform = 'translate(-9999px, 0)';
+  }
+  // live numbers: floating labels and card values follow the towers while they grow
+  for (const t of towers) {
+    const txt = pct(t.h / FLOOR);
+    if (t.liveText === txt) continue;
+    t.liveText = txt;
+    const a = LINKS[t.id] && LINKS[t.id].el.querySelector('[data-live]');
+    if (a) a.textContent = txt;
+    if (touring) { const v = tourEl.querySelector(`[data-val="${t.id}"]`); if (v) v.textContent = txt; }
+  }
+  const hv = LINKS.halo_now && LINKS.halo_now.el.querySelector('[data-live]');
+  if (hv) { const txt = pct(halo.shown * 100); if (hv.textContent !== txt) hv.textContent = txt; }
+}
+
+// ===================================================================== 07b game layer: title menu, forecast missions, score, achievements, music
+// Three ways in: Play (guess each height, then watch the real tower rise), Tour (the guided exhibition) and Free roam.
+let mode = 'boot';
+document.body.dataset.mode = mode;
+const game = { run: 0, round: -1, total: 0, results: [], phase: 'idle', guess: 30 };
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('steamtown.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('steamtown.' + k, JSON.stringify(v)); } catch (e) { /* storage may be blocked */ } }
+};
+function showEl(el, on) {
+  if (on) { el.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in'))); }
+  else { el.classList.remove('in'); setTimeout(() => { if (!el.classList.contains('in')) el.hidden = true; }, 520); }
+}
+
+// ---------- music: one track on a loop; it is on unless the visitor turns it off ----------
+const MUSIC = { src: 'assets/audio/not-quite-a-masterpiece.mp3', title: 'Not Quite a Masterpiece', vol: 0.55 };
+const music = { el: null, on: false, heard: false, announce: false, armed: false, timer: 0 };
+function fadeMusic(to, secs) {
+  const a = music.el, from = a.volume, t0 = performance.now();
+  clearInterval(music.timer);
+  music.timer = setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0) / (secs * 1000));
+    try { a.volume = from + (to - from) * k; } catch (e) { /* some phones keep the volume fixed */ }
+    if (k >= 1) { clearInterval(music.timer); if (!music.on) a.pause(); }
+  }, 40);
+}
+function showMusic() {
+  document.querySelectorAll('[data-music]').forEach(b => {
+    b.setAttribute('aria-pressed', String(music.on));
+    const lab = b.querySelector('.lab');
+    if (lab) lab.textContent = music.on ? 'Music on' : 'Music off';
+  });
+  $('menuHint').textContent = !music.on ? 'Drag to look around' : music.heard ? '♪ ' + MUSIC.title : '♪ Starts with your first click or tap';
+}
+// Browsers only let sound start after a tap, a click or a key press, so until then the music is on but waiting.
+const GESTURES = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'];
+function onGesture(e) {
+  if (e.target && e.target.closest && e.target.closest('[data-music]')) return;      // the music button speaks for itself
+  tryPlay();
+}
+function arm(on) {
+  if (music.armed === on) return;
+  music.armed = on;
+  for (const g of GESTURES) window[on ? 'addEventListener' : 'removeEventListener'](g, onGesture, true);
+}
+function tryPlay() {
+  const a = music.el;
+  if (!a || !music.on || document.hidden) return;
+  if (!a.paused) { fadeMusic(MUSIC.vol, 0.6); return; }      // still fading out from a moment ago: bring it back up
+  const started = () => {
+    arm(false);
+    if (!music.on) { a.pause(); return; }
+    music.heard = true;
+    fadeMusic(MUSIC.vol, 1.4);
+    if (music.announce && mode !== 'menu') toast(`<span><b>♪ ${MUSIC.title}</b><small>Music on</small></span>`, 3200);      // the title menu names the track itself
+    music.announce = false;
+    showMusic();
+  };
+  const p = a.play();
+  if (p && p.then) p.then(started, () => arm(true)); else started();
+}
+// remember: false for the automatic start, so only the visitor's own choice is stored
+function setMusic(on, remember = true) {
+  music.on = on;
+  if (remember) store.set('music', on);
+  if (on && !music.el) {
+    const a = music.el = new Audio();
+    a.loop = true; a.preload = 'auto'; a.volume = 0;
+    // the single-file build carries the track inside the page
+    a.src = EMBED && EMBED.audio && EMBED.audio[MUSIC.src] ? EMBED.audio[MUSIC.src] : MUSIC.src;
+    a.addEventListener('error', () => { music.on = false; arm(false); showMusic(); toast('<span><b>The music could not be loaded.</b></span>', 3000); });
+  }
+  if (on) { music.announce = true; tryPlay(); }
+  else if (music.el) { arm(false); fadeMusic(0, 0.5); }
+  showMusic();
+}
+// a tab in the background should not keep playing
+document.addEventListener('visibilitychange', () => {
+  if (!music.el || !music.on) return;
+  if (document.hidden) music.el.pause(); else tryPlay();
+});
+
+// ---------- toasts and achievements ----------
+const ACH = {
+  first: ['First forecast', 'Lock in your first guess'],
+  bullseye: ['Bullseye', 'Guess within 2 floors of the real height'],
+  skyline: ['Skyline complete', 'Finish all six missions'],
+  legend: ['Legendary analyst', 'Score 540 or more'],
+  piercer: ['Cloud piercer', 'Build your own tower past 50 floors'],
+  best: ['Best odds', 'Find the tallest tower you can build'],
+  night: ['Night shift', 'See the city after dark'],
+  sightseer: ['Sightseer', 'Visit every stop of the tour']
+};
+function toast(html, ms = 3600) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = html;
+  $('toasts').appendChild(el);
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in')));
+  setTimeout(() => { el.classList.remove('in'); setTimeout(() => el.remove(), 450); }, ms);
+}
+function award(id) {
+  const owned = store.get('ach', []);
+  if (owned.includes(id) || !ACH[id]) return;
+  owned.push(id);
+  store.set('ach', owned);
+  toast(`<img class="sprite" src="${SPRITES.trophy}" alt="" width="28" height="28"><span><b>${ACH[id][0]}</b><small>Achievement ${owned.length} of ${Object.keys(ACH).length} · ${ACH[id][1]}</small></span>`, 4600);
+  drawTrophies();
+}
+function drawTrophies() {
+  const owned = store.get('ach', []), ids = Object.keys(ACH);
+  $('trophies').innerHTML = `<span>${owned.length} / ${ids.length} achievements</span>` +
+    ids.map(id => `<i class="${owned.includes(id) ? 'got' : ''}" title="${ACH[id][0]}: ${ACH[id][1]}"></i>`).join('');
+}
+const visited = new Set();
+function noteVisit(i) { visited.add(i); if (visited.size === STOPS.length) award('sightseer'); }
+
+// ---------- the ghost: a see-through outline of the visitor's guess ----------
+const ghost = { group: new THREE.Group(), o: null, v: 0 };
+const _right = new THREE.Vector3();
+function buildGhost() {
+  const basic = o => hideOutline(new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false, fog: false, ...o }));
+  ghost.fill = new THREE.Mesh(unitBox, basic({ opacity: 0.2, side: THREE.DoubleSide }));
+  ghost.cap = new THREE.Mesh(unitBox, basic({ opacity: 0.72 }));          // a bright plate at the guessed height
+  ghost.line = new THREE.LineSegments(new THREE.EdgesGeometry(unitBox), new THREE.LineBasicMaterial({ color: 0xffffff, fog: false }));
+  ghost.fill.renderOrder = 5; ghost.cap.renderOrder = 6;
+  ghost.group.add(ghost.fill, ghost.cap, ghost.line);
+  ghost.group.visible = false;
+  scene.add(ghost.group);
+  addLink('ghost', { kind: 'ghost', color: '#ffffff', anchor: ghostAnchor });
+}
+function ghostAnchor(out) {
+  const o = ghost.o;
+  if (!o) return out.set(0, 0, 0);
+  if (o.halo) return haloPoint(ghost.v / 100, out, 4.6);
+  const h = ghost.v * FLOOR;
+  _right.setFromMatrixColumn(camera.matrixWorld, 0);
+  return out.set(o.x, o.top !== undefined ? o.top - h : h, o.z).addScaledVector(_right, o.side || Math.max(o.w, o.d) * 0.5 + 0.3);
+}
+// o: { x, z, rotY, w, d, top (when set, the box hangs down from this height), color } or { halo: true }
+function showGhost(o) {
+  ghost.o = o || null;
+  const l = LINKS.ghost;
+  l.el.classList.toggle('pinned', !!o);
+  ghost.group.visible = !!o && !o.halo;
+  if (!o || !o.halo) setHaloGhost(null);
+  if (!o) return;
+  l.align = o.halo ? undefined : 'translate(14px, -50%)';
+  l.el.classList.toggle('side', !o.halo);
+  l.el.style.setProperty('--c', hexCss(o.color));
+  if (!o.halo) {
+    ghost.group.position.set(o.x, 0, o.z);
+    ghost.group.rotation.y = (o.rotY || 0) * D2R;
+    for (const m of [ghost.fill, ghost.cap, ghost.line]) m.material.color.set(o.color);
+  }
+  sizeGhost(game.guess);
+}
+function sizeGhost(v) {
+  const o = ghost.o;
+  if (!o) return;
+  ghost.v = v;
+  if (o.halo) setHaloGhost(v / 100);
+  else {
+    const h = Math.max(0.02, v * FLOOR), hang = o.top !== undefined;
+    ghost.group.position.y = hang ? o.top - h : 0;
+    ghost.fill.scale.set(o.w, h, o.d); ghost.line.scale.set(o.w, h, o.d);
+    ghost.cap.scale.set(o.w + 0.24, 0.12, o.d + 0.24); ghost.cap.position.y = hang ? -0.06 : h - 0.06;
+  }
+  LINKS.ghost.el.innerHTML = `<small>your guess</small><b>${pct(v)}</b>`;
+}
+
+// ---------- fireworks for the finale ----------
+const fw = { max: 1600, n: 0, until: 0, timer: 0, pos: null, col: null, vel: [], life: [], base: [] };
+function buildFireworks() {
+  fw.pos = new Float32Array(fw.max * 3); fw.col = new Float32Array(fw.max * 3);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(fw.pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(fw.col, 3));
+  g.setDrawRange(0, 0);
+  fw.points = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.8, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  fw.points.frustumCulled = false;
+  scene.add(fw.points);
+}
+const FW_COLS = [0xffd66b, 0xff8a5c, 0xb9a2ff, 0x7fd4ff, 0xff7fb0, 0x9dffb0].map(C3);
+function burst(x, y, z) {
+  const c = FW_COLS[Math.floor(Math.random() * FW_COLS.length)];
+  for (let i = 0; i < 90 && fw.n < fw.max; i++) {
+    const a = Math.random() * 6.283, b = Math.acos(2 * Math.random() - 1), sp = 5 + Math.random() * 7, k = fw.n++;
+    fw.pos.set([x, y, z], k * 3);
+    fw.vel[k] = [Math.sin(b) * Math.cos(a) * sp, Math.cos(b) * sp, Math.sin(b) * Math.sin(a) * sp];
+    fw.vel[k].c = c;
+    fw.life[k] = fw.base[k] = 1.5 + Math.random() * 1.2;
+  }
+}
+function stepFireworks(dt, t) {
+  if (t < fw.until) {
+    fw.timer -= dt;
+    if (fw.timer <= 0) { burst(-20 + Math.random() * 38, 26 + Math.random() * 22, -28 + Math.random() * 30); fw.timer = 0.25 + Math.random() * 0.5; }
+  }
+  if (!fw.n && !fw.points.geometry.drawRange.count) return;
+  for (let k = 0; k < fw.n; k++) {
+    fw.life[k] -= dt;
+    if (fw.life[k] <= 0) {            // move the last live spark into this slot
+      const last = --fw.n;
+      fw.pos.copyWithin(k * 3, last * 3, last * 3 + 3);
+      fw.vel[k] = fw.vel[last]; fw.life[k] = fw.life[last]; fw.base[k] = fw.base[last];
+      k--; continue;
+    }
+    const v = fw.vel[k];
+    v[1] -= 4.5 * dt; v[0] *= 0.985; v[1] *= 0.985; v[2] *= 0.985;
+    fw.pos[k * 3] += v[0] * dt; fw.pos[k * 3 + 1] += v[1] * dt; fw.pos[k * 3 + 2] += v[2] * dt;
+    const f = Math.pow(fw.life[k] / fw.base[k], 0.7);
+    fw.col[k * 3] = v.c.r * f; fw.col[k * 3 + 1] = v.c.g * f; fw.col[k * 3 + 2] = v.c.b * f;
+  }
+  const g = fw.points.geometry;
+  g.setDrawRange(0, fw.n);
+  g.attributes.position.needsUpdate = true; g.attributes.color.needsUpdate = true;
+}
+
+// ---------- modes ----------
+const MENU_VIEW = { t: [-1.5, 11, -8], az: 28, el: 3, dist: 96 };
+let cineTimer = 0, settleTimer = 0, startTimer = 0;
+function cine(kicker, title, then) {
+  clearTimeout(cineTimer);
+  if (reduceMotion) { then(); return; }
+  $('cineK').textContent = kicker; $('cineT').textContent = title;
+  document.body.classList.remove('cine'); void document.body.offsetWidth;
+  document.body.classList.add('cine');
+  cineTimer = setTimeout(() => { document.body.classList.remove('cine'); then(); }, 1900);
+}
+// every tower at its real height, every label and stencil showing
+function buildCity() {
+  for (const t of towers) {
+    const was = t.secret;
+    t.secret = false; t.signText = null; t.liveText = null;
+    if (was || t.h !== t.share * FLOOR) t.grow(t.share * FLOOR, 1.2, Math.random() * 0.5);
+    else t.drawSign(t.share);
+  }
+  revealStrata(true);
+  halo.target = 0.154;
+  showGhost(null);
+}
+function hideCard() {
+  stopIdx = -1; selId = null; hotId = null;
+  tourEl.hidden = true;
+  seaState.target = 0; halo.target = 0.154;
+  pinEls.forEach(p => p.classList.remove('active'));
+  refreshFocus();
+}
+function setMode(m) {
+  const from = mode;
+  mode = m;
+  document.body.dataset.mode = m;
+  clearTimeout(cineTimer); clearTimeout(settleTimer); clearTimeout(startTimer);
+  document.body.classList.remove('cine');
+  showEl($('menu'), m === 'menu');
+  $('hud').hidden = m !== 'play';
+  $('credits').hidden = true; $('info').setAttribute('aria-expanded', 'false');
+  pinsShown = m === 'roam' || m === 'tour';
+  conceal = m === 'play' ? concealInPlay : null;
+  if (from === 'play' && m !== 'play') { game.run++; game.phase = 'idle'; buildCity(); }
+  controls.autoRotate = m === 'menu' && !reduceMotion;
+  $('spin').setAttribute('aria-pressed', 'false');
+  if (m === 'menu') {
+    hideCard();
+    setShift('menu');
+    flyToView(MENU_VIEW, 2.4);
+    const best = store.get('best', 0);
+    $('best').hidden = !best;
+    $('best').textContent = best ? `Your best forecast: ${best} / 600` : '';
+    drawTrophies();
+  } else if (m === 'tour') openStop(0);
+  else if (m === 'roam') { hideCard(); setShift('none'); goHome(1.8); }
+  else if (m === 'play') startPlay();
+}
+
+// ---------- the forecast game ----------
+const ROUNDS = [
+  { stop: 'tiers', kind: 'tier', short: 'Foundation', title: 'The foundation', start: 30, real: () => strata[2].share + strata[3].share + strata[4].share,
+    q: () => `The foundation under the town is <b>100 floors</b> deep and holds every one of the 81,117 games. Counting down from the top, how many floors are games with <b>100,000 owners or more</b>?` },
+  { stop: 'systems', target: 'sys2', givens: ['sys0'], short: 'Systems', title: 'Power-up 1 · Systems', start: 30,
+    q: () => `Games on one operating system reach 100,000 owners <b>${pct(towerById.sys0.share)}</b> of the time, so that tower is ${towerById.sys0.share.toFixed(1)} floors tall. How tall is the tower for games on <b>all three systems</b>?` },
+  { stop: 'languages', target: 'lang3', givens: ['lang0'], short: 'Languages', title: 'Power-up 2 · Languages', start: 30,
+    q: () => `Games in one language: <b>${towerById.lang0.share.toFixed(1)} floors</b>. How tall is the tower for games in <b>11 or more languages</b>?` },
+  { stop: 'dlc', target: 'dlc1', givens: ['dlc0'], short: 'DLC', title: 'Power-up 3 · DLC', start: 30,
+    q: () => `Games with no DLC: <b>${towerById.dlc0.share.toFixed(1)} floors</b>. How tall is the tower for games that <b>have DLC</b>?` },
+  { stop: 'combo', target: 'c11_3', givens: ['c1_0', 'c1_1', 'c1_2', 'c1_3', 'c11_0'], short: 'Combo', title: 'Combo · Stack all three', start: 45,
+    q: () => `Now stack the power-ups. Take one-system games in <b>11+ languages</b> with <b>6 or more DLC</b>. The front row and the first glass tower are built for comparison. How tall does the last one go?` },
+  { stop: 'halo', kind: 'halo', short: 'Halo', title: 'The halo', start: 50, real: () => 15.4,
+    q: () => `Last one. The ring is everything that makes one game outsell another. Among the 81,117 games with an owner estimate, how much of it do systems, languages and DLC <b>explain together</b>?` }
+];
+const realOf = r => (r.real ? r.real() : towerById[r.target].share);
+const stopIndex = id => STOPS.findIndex(s => s.id === id);
+const STARS = n => '★'.repeat(n) + '☆'.repeat(3 - n);
+// labels that would give an answer away stay hidden until their mission is revealed
+function concealInPlay(id) {
+  const l = LINKS[id];
+  if (l.kind === 'tower') return l.tower.secret;
+  if (l.kind === 'tier') return !game.results[0];
+  if (l.kind === 'halo') return !game.results[5];
+  return false;
+}
+function updateHud() {
+  const n = ROUNDS.length;
+  $('hudMission').textContent = game.phase === 'done' ? 'Skyline complete' : `Mission ${Math.min(Math.max(game.round, 0), n - 1) + 1} / ${n}`;
+  const sc = $('hudScore');
+  if (sc.textContent !== String(game.total)) { sc.textContent = game.total; sc.classList.remove('bump'); void sc.offsetWidth; sc.classList.add('bump'); }
+  $('hudPips').innerHTML = ROUNDS.map((_, i) => { const x = game.results[i]; return `<i class="${x && x.shown ? 'p' + x.stars : i === game.round ? 'cur' : ''}"></i>`; }).join('');
+}
+function startPlay() {
+  Object.assign(game, { run: game.run + 1, round: -1, total: 0, results: [], phase: 'idle' });
+  const run = game.run;
+  hideCard();
+  setShift('none');
+  for (const t of towers) { t.secret = true; t.signText = null; t.grow(0, 0.9); }
+  revealStrata(false);
+  halo.target = 0;
+  showGhost(null);
+  fw.until = 0;
+  $('hudScore').textContent = '0';
+  updateHud();
+  goHome(1.4);
+  toast('<span><b>The city is not built yet.</b><small>Forecast each district to raise its towers.</small></span>', 3400);
+  startTimer = setTimeout(() => { if (mode === 'play' && game.run === run) nextRound(); }, reduceMotion ? 300 : 1500);
+}
+// the view for a guess of v floors: the stop's own view while the outline fits in it, a wider one when it does not
+function guessCam(r, v) {
+  const cam = camOf(STOPS[stopIndex(r.stop)]);
+  if (r.kind) return cam;
+  const t = towerById[r.target], H = v * FLOOR;
+  if (H + 3 <= cam.t[1] + cam.dist * 0.3) return cam;
+  return { t: [t.x, H * 0.5 + 1.5, t.z], az: cam.az, el: Math.max(5, cam.el * 0.6), dist: THREE.MathUtils.clamp(H * 1.75 + 14, cam.dist, 100) };
+}
+function nextRound() {
+  settle();
+  game.round++;
+  if (game.round >= ROUNDS.length) { finishPlay(); return; }
+  const r = ROUNDS[game.round], i = stopIndex(r.stop), s = STOPS[i], run = game.run, round = game.round;
+  game.phase = 'intro'; game.guess = r.start;
+  updateHud();
+  tourEl.hidden = true;
+  stopIdx = i; selId = null; hotId = null;
+  seaState.target = s.sea || 0;
+  showGhost(null);
+  for (const id of r.givens || []) { const t = towerById[id]; t.secret = false; t.signText = null; t.liveText = null; t.grow(t.share * FLOOR, 1.3, 0.6, 0); }
+  flyToView(guessCam(r, r.start), 2.0);
+  setShift('card');
+  refreshFocus();
+  cine(`Mission ${round + 1} of ${ROUNDS.length}`, r.title, () => { if (mode === 'play' && game.run === run && game.round === round) showGuess(); });
+}
+let fitH = 0;
+function showGuess() {
+  const r = ROUNDS[game.round], s = STOPS[stopIdx];
+  game.phase = 'guess';
+  fitH = game.guess * FLOOR;
+  if (r.kind === 'tier') showGhost({ x: 0, z: 0, w: strata[0].w + 0.7, d: strata[0].w + 0.7, top: strata[4].top + 0.06, color: 0xffd66b, side: strata[0].w * 0.74 });
+  else if (r.kind === 'halo') showGhost({ halo: true, color: 0xffffff });
+  else {
+    const t = towerById[r.target], a = (t.rotY || 0) * D2R, ox = t.fp.ox || 0;
+    showGhost({ x: t.x + ox * Math.cos(a), z: t.z - ox * Math.sin(a), rotY: t.rotY, w: t.fp.w + 0.5, d: t.fp.d + 0.5, color: t.accent });
+  }
+  tourEl.innerHTML = `<div class="top"><img class="sprite" src="${SPRITES[s.sprite]}" alt="" width="44" height="44">
+      <div><p class="eyebrow">Mission ${game.round + 1} of ${ROUNDS.length} · your forecast</p><h2>${r.title}</h2></div>
+      <button type="button" class="close" aria-label="Quit to the menu">×</button></div>
+    <p>${r.q()}</p>
+    <div class="guess">
+      <div class="dial"><button type="button" class="nudge" data-d="-0.5" aria-label="Half a floor less">−</button>
+        <output class="big" id="guessOut" for="guess">${pct(game.guess)}</output>
+        <button type="button" class="nudge" data-d="0.5" aria-label="Half a floor more">+</button></div>
+      <input type="range" id="guess" min="0" max="100" step="0.5" value="${game.guess}" style="--v:${game.guess}%" aria-label="Your guess, from 0 to 100">
+      <div class="scale" aria-hidden="true"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+    </div>
+    <p class="note">Drag the slider. The outline in the city follows your guess.</p>
+    <div class="nav"><span class="dots" aria-hidden="true">${ROUNDS.map((_, k) => `<i class="${k === game.round ? 'on' : ''}"></i>`).join('')}</span>
+      <button type="button" class="next" id="lock">Lock it in</button></div>`;
+  tourEl.hidden = false;
+  tourEl.scrollTop = 0;
+  tourEl.style.animation = 'none'; void tourEl.offsetWidth; tourEl.style.animation = '';
+  tourEl.querySelector('.close').onclick = () => setMode('menu');
+  const input = $('guess'), out = $('guessOut');
+  const setGuess = v => {
+    game.guess = Math.min(100, Math.max(0, v));
+    input.value = game.guess; input.style.setProperty('--v', game.guess + '%');
+    out.textContent = pct(game.guess);
+    sizeGhost(game.guess);
+    const H = game.guess * FLOOR;
+    if (!r.kind && Math.abs(H - fitH) > 3) { fitH = H; flyToView(guessCam(r, game.guess), 0.7, 0); }
+  };
+  input.addEventListener('input', () => setGuess(+input.value));
+  tourEl.querySelectorAll('.nudge').forEach(b => b.addEventListener('click', () => setGuess(game.guess + +b.dataset.d)));
+  $('lock').onclick = lockIn;
+  refreshFocus();
+}
+function lockIn() {
+  if (game.phase !== 'guess') return;
+  const r = ROUNDS[game.round], real = realOf(r), err = Math.abs(game.guess - real);
+  const pts = Math.max(0, Math.round(100 - err * 5)), stars = err <= 2 ? 3 : err <= 6 ? 2 : err <= 12 ? 1 : 0;
+  game.results[game.round] = { guess: game.guess, real, pts, stars, shown: false };
+  game.phase = 'reveal';
+  const s = STOPS[stopIdx], run = game.run, round = game.round, last = round === ROUNDS.length - 1;
+  for (const id of s.links) { const t = towerById[id]; if (t) { t.secret = false; t.signText = null; t.liveText = null; } }
+  if (r.kind === 'tier') revealStrata(true);
+  const banner = `<div class="verdict wait s${stars}" id="verdict"><span class="stars" aria-label="${stars} of 3 stars">${STARS(stars)}</span>
+      <span><b>${['Way off', 'In the area', 'Close', 'Bullseye'][stars]} · +${pts} points</b><small>You guessed ${pct(game.guess)}. The real answer is ${pct(real)}.</small></span></div>`;
+  openStop(stopIdx, { force: true, keep: new Set(r.givens || []), banner, cam: guessCam(r, Math.max(game.guess, real)),
+    eyebrow: `Mission ${round + 1} of ${ROUNDS.length} · result`, dots: ROUNDS.map((_, k) => `<i class="${k === round ? 'on' : ''}"></i>`).join(''),
+    next: { label: last ? 'See my score' : 'Next mission', fn: nextRound }, onClose: () => setMode('menu') });
+  // the verdict waits until the real thing has finished rising
+  const wait = reduceMotion ? 60 : r.kind === 'tier' ? 1500 : r.kind === 'halo' ? 3600 : (0.35 + (s.links.length - 1) * 0.14 + 1.5) * 1000 + 150;
+  clearTimeout(settleTimer);
+  settleTimer = setTimeout(() => { if (mode === 'play' && game.run === run && game.round === round) settle(); }, wait);
+}
+function settle() {
+  const res = game.results[game.round];
+  if (!res || res.shown) return;
+  res.shown = true;
+  game.total += res.pts;
+  updateHud();
+  const v = $('verdict');
+  if (v) v.classList.remove('wait');
+  award('first');
+  if (res.stars === 3) award('bullseye');
+}
+function finishPlay() {
+  game.phase = 'done';
+  showGhost(null);
+  updateHud();
+  const mine = towerById.yours;
+  mine.secret = false; mine.signText = null; mine.liveText = null;
+  mine.grow(mine.share * FLOOR, 1.4, 0.4);
+  const total = game.total, rank = total >= 540 ? 4 : total >= 450 ? 3 : total >= 330 ? 2 : total >= 180 ? 1 : 0;
+  const best = Math.max(total, store.get('best', 0));
+  store.set('best', best);
+  stopIdx = -1; selId = null; hotId = null;
+  seaState.target = 0;
+  setShift('card');
+  flyToView({ t: [-1.5, 13, -8], az: 34, el: 4, dist: 100 }, 2.4);
+  setTime('night');
+  fw.until = clock.elapsedTime + 14; fw.timer = 0.7;
+  tourEl.innerHTML = `<div class="top"><img class="sprite" src="${SPRITES.trophy}" alt="" width="44" height="44">
+      <div><p class="eyebrow">Skyline complete</p><h2>You built Steam Town</h2></div>
+      <button type="button" class="close" aria-label="Back to the menu">×</button></div>
+    <div class="scorecard" style="--c:${hexCss(TIER[rank].color)}"><span class="big">${total}</span><span><b>${TIER[rank].name} analyst</b><small>out of 600 · your best ${best}</small></span></div>
+    <table class="res"><thead><tr><th scope="col">Mission</th><th scope="col">You</th><th scope="col">Real</th><th scope="col"><span class="sr">Stars</span></th><th scope="col">Pts</th></tr></thead>
+      <tbody>${ROUNDS.map((r, i) => { const x = game.results[i]; return `<tr><th scope="row">${r.short}</th><td>${pct(x.guess)}</td><td>${pct(x.real)}</td><td class="stars" aria-label="${x.stars} of 3 stars">${STARS(x.stars)}</td><td class="pts">${x.pts}</td></tr>`; }).join('')}</tbody></table>
+    <p class="note">Every tower you just raised is real data. Walk through what it means, or build a tower of your own.</p>
+    <div class="picks"><button type="button" id="rBuild">Build my own tower</button><button type="button" id="rRoam">Free roam</button></div>
+    <div class="nav"><button type="button" id="rAgain">Play again</button><span class="dots" aria-hidden="true"></span><button type="button" class="next" id="rTour">Take the tour</button></div>`;
+  tourEl.hidden = false;
+  tourEl.scrollTop = 0;
+  tourEl.style.animation = 'none'; void tourEl.offsetWidth; tourEl.style.animation = '';
+  tourEl.querySelector('.close').onclick = () => setMode('menu');
+  $('rBuild').onclick = () => { setMode('roam'); openStop(stopIndex('yours')); };
+  $('rTour').onclick = () => setMode('tour');
+  $('rAgain').onclick = () => { setTime('golden'); setMode('play'); };
+  $('rRoam').onclick = () => setMode('roam');
+  refreshFocus();
+  setTimeout(() => { if (game.phase === 'done') { award('skyline'); if (rank === 4) award('legend'); } }, 900);
+}
+
+// ---------- photo mode ----------
+function setPhoto(on) {
+  document.body.classList.toggle('photo', on);
+  $('photoBar').hidden = !on;
+}
+function savePhoto() {
+  composer.render();
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'steam-town.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }, 'image/png');
+}
+
+function buildGame() {
+  buildGhost();
+  buildFireworks();
+  $('mPlay').onclick = () => setMode('play');
+  $('mTour').onclick = () => setMode('tour');
+  $('mRoam').onclick = () => setMode('roam');
+  $('menuBtn').onclick = () => setMode('menu');
+  document.querySelectorAll('[data-music]').forEach(b => b.addEventListener('click', () => setMusic(!music.on)));
+  $('photo').onclick = () => setPhoto(true);
+  $('photoExit').onclick = () => setPhoto(false);
+  // saving a file only works when the page is not inside a sandboxed frame
+  let framed = true;
+  try { framed = window.self !== window.top; } catch (e) { framed = true; }
+  $('photoSave').hidden = framed;
+  $('photoSave').onclick = savePhoto;
+  window.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('photo')) setPhoto(false); });
+  drawTrophies();
+  updateHud();
+  // the music is on unless this visitor turned it off on an earlier visit
+  if (store.get('music', null) !== false) setMusic(true, false);
+}
+function stepGame(dt, t) {
+  stepFireworks(dt, t);
+  if (ghost.group.visible) ghost.fill.material.opacity = 0.18 + 0.07 * Math.sin(t * 3.2);
+}
+
+// ===================================================================== 08 time of day, camera, controls, main loop
+const PRESETS = {
+  day: {
+    top: 0x4f9fe6, horizon: 0xcfe8fb, bottom: 0xdfe8fb, sunColor: 0xfff0da, sunI: 2.75, sunAz: 128, sunEl: 50, glow: 1.0,
+    hemiSky: 0xdcedff, hemiGround: 0xf0dccb, hemiI: 1.32, fog: 0xd7e8f8, fogNear: 70, fogFar: 470, bloom: 0.2, threshold: 0.88,
+    windows: 0, lamps: 0, stars: 0, sat: 1.08, tint: 0.55, shadow: 0x6a4fc2, light: 0xffd7a8, vignette: 0.3,
+    cloud: 0xffffff, sea: 0xf7faff, seaFloor: 0xe6edfb, night: 0, glassA: 0x8fb0d6, glassB: 0xc4d8ee
+  },
+  golden: {
+    top: 0x5f7fd2, horizon: 0xffc7a0, bottom: 0xf0cfe0, sunColor: 0xffae66, sunI: 2.9, sunAz: 106, sunEl: 13, glow: 1.5,
+    hemiSky: 0xffd9c4, hemiGround: 0x9a86d0, hemiI: 1.2, fog: 0xf6c9b6, fogNear: 60, fogFar: 430, bloom: 0.42, threshold: 0.8,
+    windows: 0.16, lamps: 0.25, stars: 0, sat: 1.12, tint: 1.0, shadow: 0x5b3fb8, light: 0xffb878, vignette: 0.38,
+    cloud: 0xffe6d6, sea: 0xffe0d2, seaFloor: 0xf2c4c4, night: 0.22, glassA: 0xd9a58a, glassB: 0xf3cfae
+  },
+  night: {
+    top: 0x070d2c, horizon: 0x283575, bottom: 0x141a44, sunColor: 0x9db4ff, sunI: 0.6, sunAz: 215, sunEl: 46, glow: 0.4,
+    hemiSky: 0x3a4a86, hemiGround: 0x1d1832, hemiI: 0.6, fog: 0x1a2250, fogNear: 60, fogFar: 400, bloom: 0.55, threshold: 0.72,
+    windows: 0.42, lamps: 1, stars: 1, sat: 1.05, tint: 0.7, shadow: 0x2a2f7a, light: 0xffc98a, vignette: 0.46,
+    cloud: 0x7f8cc8, sea: 0x5a67a8, seaFloor: 0x2a3470, night: 1, glassA: 0x1c2348, glassB: 0x262e5a
+  }
+};
+const COLOR_KEYS = ['top', 'horizon', 'bottom', 'sunColor', 'hemiSky', 'hemiGround', 'fog', 'shadow', 'light', 'cloud', 'sea', 'seaFloor', 'glassA', 'glassB'];
+const live = {};
+function setLive(p) { for (const k in p) live[k] = COLOR_KEYS.includes(k) ? new THREE.Color(p[k]) : p[k]; }
+setLive(PRESETS.golden);
+document.body.dataset.time = 'golden';
+let fromP = null, toP = null, mixT = 1;
+const sunDirV = new THREE.Vector3();
+function applyLive() {
+  skyUniforms.uTop.value.copy(live.top); skyUniforms.uHorizon.value.copy(live.horizon); skyUniforms.uBottom.value.copy(live.bottom);
+  skyUniforms.uSunColor.value.copy(live.sunColor); skyUniforms.uSunGlow.value = live.glow;
+  const az = live.sunAz * D2R, el = live.sunEl * D2R;
+  sunDirV.set(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
+  skyUniforms.uSunDir.value.copy(sunDirV);
+  U.sunDir.value.copy(sunDirV); U.sunColor.value.copy(live.sunColor);
+  sun.target.position.set(0, 0, -6);
+  sun.position.copy(sunDirV).multiplyScalar(150).add(sun.target.position);
+  sun.color.copy(live.sunColor); sun.intensity = live.sunI;
+  hemi.color.copy(live.hemiSky); hemi.groundColor.copy(live.hemiGround); hemi.intensity = live.hemiI;
+  scene.fog.color.copy(live.fog); scene.fog.near = live.fogNear; scene.fog.far = live.fogFar;
+  bloom.strength = live.bloom; bloom.threshold = live.threshold;
+  for (const m of MAT.bldg) if (m) m.emissiveIntensity = live.windows;
+  stars.material.opacity = live.stars;
+  grade.uniforms.uSat.value = live.sat; grade.uniforms.uTint.value = live.tint; grade.uniforms.uVignette.value = live.vignette;
+  grade.uniforms.uShadow.value.copy(live.shadow); grade.uniforms.uLight.value.copy(live.light);
+  cloudMat.color.copy(live.cloud); seaMat.color.copy(live.sea); seaFloor.material.color.copy(live.seaFloor);
+  U.night.value = live.night; U.glassA.value.copy(live.glassA); U.glassB.value.copy(live.glassB);
+  for (const f of onTime) f(live);
+}
+function setTime(name) {
+  document.body.dataset.time = name;
+  document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.time === name)));
+  fromP = {};
+  for (const k in live) fromP[k] = COLOR_KEYS.includes(k) ? live[k].clone() : live[k];
+  toP = PRESETS[name];
+  mixT = reduceMotion ? 1 : 0;
+  if (reduceMotion) { setLive(toP); applyLive(); }
+}
+const tmpCol = new THREE.Color();
+function stepTime(dt) {
+  if (mixT >= 1 || !toP) return;
+  mixT = Math.min(1, mixT + dt / 1.6);
+  const e = easeIO(mixT);
+  for (const k in toP) {
+    if (COLOR_KEYS.includes(k)) live[k].copy(fromP[k]).lerp(tmpCol.set(toP[k]), e);
+    else live[k] = fromP[k] + (toP[k] - fromP[k]) * e;
+  }
+  applyLive();
+}
+
+// ---------- camera ----------
+const HOME = { t: [-1.5, 10.5, -8], az: 34, el: 6, dist: 98 };
+let fitK = 1;
+function viewPos(v, outT, outP) {
+  outT.set(v.t[0], v.t[1], v.t[2]);
+  const a = v.az * D2R, e = v.el * D2R;
+  outP.set(Math.sin(a) * Math.cos(e), Math.sin(e), Math.cos(a) * Math.cos(e)).multiplyScalar(v.dist * fitK).add(outT);
+}
+let flight = null;
+function flyTo(target, pos, dur, lift) {
+  if (!Number.isFinite(camera.position.lengthSq())) camera.position.copy(pos);      // never start a flight from a broken position
+  flight = { t: 0, d: reduceMotion ? 0.001 : dur, p0: camera.position.clone(), t0: controls.target.clone(), p1: pos.clone(), t1: target.clone(),
+    lift: lift ?? Math.min(12, camera.position.distanceTo(pos) * 0.08) };
+  controls.enabled = false;
+}
+function flyToView(v, dur, lift) {
+  const T = new THREE.Vector3(), P = new THREE.Vector3();
+  viewPos(v, T, P);
+  flyTo(T, P, dur, lift);
+}
+function stepFlight(dt) {
+  if (!flight) return;
+  flight.t = Math.min(1, flight.t + dt / flight.d);
+  const e = easeIO(flight.t);
+  camera.position.lerpVectors(flight.p0, flight.p1, e);
+  camera.position.y += Math.sin(Math.PI * e) * flight.lift;
+  controls.target.lerpVectors(flight.t0, flight.t1, e);
+  camera.lookAt(controls.target);
+  if (flight.t >= 1) { flight = null; controls.enabled = true; controls.update(); }
+}
+const goHome = (dur = 1.6) => flyToView(HOME, dur);
+// Slide the picture so the subject sits in the free part of the screen: left of an open card, right of the title menu.
+const shift = { x: 0, y: 0, tx: 0, ty: 0, kind: 'none' };
+function setShift(kind) {
+  shift.kind = kind;
+  shift.tx = isPhone() ? 0 : kind === 'card' ? 0.13 : kind === 'menu' ? -0.16 : 0;
+  shift.ty = !isPhone() ? 0 : kind === 'card' ? 0.2 : kind === 'menu' ? 0.06 : 0;
+}
+function stepShift(dt) {
+  const k = reduceMotion ? 1 : Math.min(1, dt * 4);
+  shift.x += (shift.tx - shift.x) * k;
+  shift.y += (shift.ty - shift.y) * k;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (Math.abs(shift.x) < 1e-4 && Math.abs(shift.y) < 1e-4) {
+    if (camera.view && camera.view.enabled) camera.clearViewOffset();
+  } else {
+    camera.setViewOffset(w, h, shift.x * w, shift.y * h, w, h);
+  }
+  tiltH.uniforms.r.value = tiltV.uniforms.r.value = 0.5 + shift.y;
+}
+
+// ---------- controls ----------
+$('tourBtn').addEventListener('click', () => { if (mode === 'tour' || mode === 'roam') openStop(stopIdx >= 0 ? stopIdx : 0); else setMode('tour'); });
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => { setTime(b.dataset.time); if (b.dataset.time === 'night') award('night'); }));
+let miniOn = true;
+$('mini').addEventListener('click', e => { miniOn = !miniOn; tiltH.enabled = tiltV.enabled = miniOn; e.currentTarget.setAttribute('aria-pressed', String(miniOn)); });
+let petalsOn = !reduceMotion;
+$('petals').setAttribute('aria-pressed', String(petalsOn));
+$('petals').addEventListener('click', e => { petalsOn = !petalsOn; if (petals.mesh) petals.mesh.visible = petalsOn; e.currentTarget.setAttribute('aria-pressed', String(petalsOn)); });
+$('spin').addEventListener('click', e => { controls.autoRotate = !controls.autoRotate; e.currentTarget.setAttribute('aria-pressed', String(controls.autoRotate)); });
+$('reset').addEventListener('click', () => {
+  if (mode === 'play') flyToView(stopIdx >= 0 ? guessCam(ROUNDS[game.round], game.guess) : HOME, 1.2);
+  else if (stopIdx >= 0) { selId = null; refreshFocus(); flyToView(camOf(STOPS[stopIdx]), 1.2); }
+  else goHome(1.2);
+});
+$('info').addEventListener('click', e => { const c = $('credits'); c.hidden = !c.hidden; e.currentTarget.setAttribute('aria-expanded', String(!c.hidden)); });
+window.addEventListener('keydown', e => {
+  if (mode !== 'tour' && mode !== 'roam') return;
+  if (stopIdx < 0 || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight' && stopIdx < STOPS.length - 1) openStop(stopIdx + 1);
+  if (e.key === 'ArrowLeft' && stopIdx > 0) openStop(stopIdx - 1);
+  if (e.key === 'Escape') closeTour();
+});
+
+// ---------- resize and loop ----------
+// After the window changes shape, frame the current subject again (the title view or the open stop).
+function refit() {
+  if (flight) return;
+  if (mode === 'menu') flyToView(MENU_VIEW, 0.8);
+  else if (mode === 'play' && stopIdx >= 0) flyToView(guessCam(ROUNDS[game.round], game.guess), 0.8);
+  else if (stopIdx >= 0) flyToView(camOf(STOPS[stopIdx]), 0.8);
+}
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;      // a tab opened in the background has no size yet; a resize event follows when it gets one
+  renderer.setPixelRatio(PR());
+  renderer.setSize(w, h, false);
+  composer.setPixelRatio(PR());
+  composer.setSize(w, h);
+  bloom.setSize(w * PR(), h * PR());
+  camera.aspect = w / h;
+  camera.fov = w < 760 ? 44 : 36;
+  camera.updateProjectionMatrix();
+  const tanH = Math.tan((camera.fov * D2R) / 2) * camera.aspect;     // half the view width per unit of distance
+  const was = fitK;
+  fitK = THREE.MathUtils.clamp(Math.pow(0.47 / tanH, 0.62), 1, 1.9);
+  controls.maxDistance = 230 * fitK;
+  setShift(shift.kind);
+  const k = w < 760 ? 1.2 : 1.5;
+  tiltH.uniforms.h.value = k / (w * PR());
+  tiltV.uniforms.v.value = k / (h * PR());
+  if (Math.abs(fitK - was) > 0.05) refit();
+}
+window.addEventListener('resize', resize);
+resize();
+applyLive();
+
+const clock = new THREE.Clock();
+function frame() {
+  // camera flights, light changes and tower growth follow wall-clock time; small animations take capped steps
+  const raw = clock.getDelta(), dt = Math.min(raw, 0.05), slow = Math.min(raw, 0.5), t = clock.elapsedTime;
+  stepFlight(slow);
+  if (!flight) controls.update();
+  stepTime(slow);
+  stepShift(slow);
+  stepSea(slow);
+  U.time.value = t;
+  if (!reduceMotion) { stepCars(dt); stepClouds(dt, t); }
+  if (petalsOn && petals.mesh) stepPetals(dt, t);
+  stepMega(slow, t);
+  stepGame(dt, t);
+  stepTour();
+  // on a narrow screen the camera stands further back, so the haze starts further away by the same amount
+  const back = camera.position.distanceTo(controls.target) * (1 - 1 / fitK);
+  scene.fog.near = live.fogNear + back; scene.fog.far = live.fogFar + back;
+  for (const f of onFrame) f(dt, t);
+  grade.uniforms.uTime.value = t;
+  composer.render(dt);
+  requestAnimationFrame(frame);
+}
+
+// ---------- start ----------
+async function boot() {
+  // the lettering painted on the structures needs the sign font, so wait for it first (but not for long)
+  try {
+    await Promise.race([
+      Promise.all([document.fonts.load('900 100px "Big Shoulders Display"'), document.fonts.load('700 40px "Big Shoulders Display"')]),
+      new Promise(r => setTimeout(r, 2500))
+    ]);
+  } catch (err) { /* fall back to the system font */ }
+  const jobs = [];
+  buildTown(jobs);
+  buildMega(jobs);
+  await Promise.all(jobs);
+  stepCars(0);
+  finishJacarandas();
+  finishMega();
+  buildTourUI();
+  buildGame();
+  applyLive();
+  if (petals.mesh) petals.mesh.visible = petalsOn;
+  $('msg').textContent = 'Ready';
+  $('loader').classList.add('done');
+  setTimeout(() => { $('loader').hidden = true; }, 950);
+  const T = new THREE.Vector3(), P = new THREE.Vector3();
+  viewPos({ t: HOME.t, az: 68, el: 26, dist: 150 }, T, P);
+  camera.position.copy(P); controls.target.copy(T); camera.lookAt(T);
+  frame();
+  // #play, #tour and #roam skip the title menu
+  const start = { '#play': 'play', '#tour': 'tour', '#roam': 'roam' }[location.hash] || 'menu';
+  setMode(start);
+  if (start === 'menu') flyToView(MENU_VIEW, reduceMotion ? 0.001 : 3.8);
+}
+window.SteamTown = { setMode, openStop, closeTour, selectLink, setTime, setMusic, flyToView, towers, camera, controls, live, halo, game, music };
+boot().catch(err => {
+  $('msg').textContent = 'Could not load the town: ' + err.message;
+  console.error(err);
+});
+
+</script>
+</body>
+</html>
